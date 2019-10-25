@@ -1,6 +1,5 @@
-#!/usr/bin/env python2 
+#!/usr/bin/env python2
 #-*- coding:utf-8 -*-
-
 """
 e2m3u2bouquet.e2m3u2bouquet -- Enigma2 IPTV m3u to bouquet parser
 
@@ -264,11 +263,10 @@ class Provider:
     def _download_picon_file(self, service, total):
 
         count, x = service 
-        image_formats = ( "image/png", "image/jpeg", "image/jpg", "image/bmp", "image/gif", "image/x-icon", "image/x-pcx" )
         #logo_url, title = x['tvg-logo'], get_safe_filename(get_service_title(x)) # for extinf m3u title as a file name
         logo_url, title = x['tvg-logo'], x['serviceRef'].replace(':', '_').upper() # for bouquet serviceref as a filename
 
-        # Get the full picon file name with path
+        # Get the full picon file name with path without ext
         pfile_name = os.path.join(self.config.icon_path, title)
 
         if not filter(os.path.isfile, glob.glob(pfile_name + '*')):
@@ -277,15 +275,13 @@ class Provider:
             try:
                 with requests.get(logo_url, headers=REQHEADERS, timeout=(5,30), verify=False) as r:
                     r.raise_for_status()
-                    if r.headers.get('Content-type') not in image_formats:
-                        raise ValueError('Not valid image format!')
-                    im = Image.open(BytesIO(r.content))                                                                                                    
-                    width, height = im.size                                                                                                                
-                    if width > 220 or height > 132:                                                                                                        
-                        im.resize(220,132)
+                    im = Image.open(BytesIO(r.content))
+                    if im.format is None:
+                       raise ValueError('Not valid image format!')
+                    im.thumbnail((220, 132))
                     if DEBUG:
                         print('Save picon: {}.{}'.foramt(title, 'png'))
-                    im.save('{}.{}'.format(pfile_name, 'png'))
+                    im.save('{}.{}'.format(pfile_name, 'png'), format='PNG')
 
             except Exception, e:
                 if DEBUG:
@@ -293,10 +289,9 @@ class Provider:
                 # create an empty picon so that we don't retry this picon
                 open('{}.{}'.format(pfile_name, 'None'), 'a').close()
 
-        if not (IMPORTED and DEBUG):                                                                                                                   
-            # don't output when called from the plugin                                                                                                 
+        if not (IMPORTED and DEBUG):
+            # don't output when called from the plugin
             progressbar(count, total, status='Done')
-
 
     def _parse_panel_bouquet(self):
         """Check providers bouquet for custom service references
