@@ -1,4 +1,4 @@
-#!/usr/bin/env python2 
+#!/usr/bin/env python2
 #-*- coding:utf-8 -*-
 """
 e2m3u2bouquet.e2m3u2bouquet -- Enigma2 IPTV m3u to bouquet parser
@@ -16,10 +16,13 @@ ROOT_DIR = os.path.dirname(os.path.realpath(__file__))
 sys.path.insert(0, os.path.join(ROOT_DIR, 'modules'))
 for wheel in glob.glob(os.path.join(ROOT_DIR, 'modules', '*.whl')): sys.path.insert(0, wheel)
 
-import re
 import time
+import gzip
 import errno
 import requests
+import threading
+import SocketServer
+import SimpleHTTPServer
 try:
     from PIL import Image
     from io import BytesIO
@@ -27,14 +30,14 @@ try:
 except:
     USE_PIL=False
 from slugify import slugify
+from socket import socket, AF_INET, SOCK_DGRAM
 from collections import OrderedDict
 from requests_file import FileAdapter
 from requests.utils import requote_uri
 from urllib3.packages.six.moves.urllib.parse import parse_qs, urlparse, quote
 from urllib3.exceptions import InsecureRequestWarning
-
 # Suppress the SSL warning from urllib3
-requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning) 
+requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
 
 try:
     import xml.etree.cElementTree as ET
@@ -47,23 +50,34 @@ except ImportError:
     pass
 
 __all__ = []
-__version__ = '0.8.5'
+__version__ = '0.9.5'
 __date__ = '2017-06-04'
-__updated__ = '2019-10-23'
+__updated__ = '2019-11-11'
 
 DEBUG = 0
 TESTRUN = 0
 IMPORTED = False
 
 ENIGMAPATH = '/etc/enigma2/'
+CFGPATH = os.path.join(ENIGMAPATH, 'e2m3u2bouquet/')
+
 EPGIMPORTPATH = '/etc/epgimport/'
 CROSSEPGPATH = '/usr/crossepg/providers/'
-CFGPATH = os.path.join(ENIGMAPATH, 'e2m3u2bouquet/')
 PICONSPATH = '/usr/share/enigma2/picon/'
+
 PLACEHOLDER_SERVICE = '#SERVICE 1:832:d:0:0:0:0:0:0:0:'
-NAMESPACE = '0'
-DEFAULTEPG = 'https://iptvx.one/epg/epg.xml.gz'
+NAMESPACE = '1010101'
+PORT = 10001
+DEFAULTEPG = 'http://epg.openboxfan.com/xmltv-t-sd.xml.gz'
+
 REQHEADERS = {'User-Agent': 'Mozilla/5.0 (SmartHub; SMART-TV; U; Linux/SmartTV; Maple2012) AppleWebKit/534.7 (KHTML, like Gecko) SmartTV Safari/534.7'}
+
+class SimpleServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
+    daemon_threads = True
+    allow_reuse_address = True
+
+    def __init__(self, server_address, RequestHandlerClass):
+        SocketServer.TCPServer.__init__(self, server_address, RequestHandlerClass)
 
 class CLIError(Exception):
     """Generic exception to raise and log different fatal errors."""
@@ -106,7 +120,7 @@ def make_config_folder():
 def uninstaller():
     """Clean up routine to remove any previously made changes
     """
-    Provider._update_status('Uninstaller', 'Running uninstall')                                                                             
+    Provider._update_status('Uninstaller', 'Running uninstall')
     print(Status.message)
     try:
         # Bouquets
@@ -141,6 +155,19 @@ def uninstaller():
     Provider._update_status('Uninstaller', 'Uninstall complete')
     print(Status.message)
 
+def get_selfip():
+    # connecting to a UDP address doesn't send packets
+    try:
+        return [(s.connect(('1.1.1.1', 0)), s.getsockname()[0], s.close()) for s in [socket(AF_INET, SOCK_DGRAM)]][0][1]
+    except:
+       logger.error('Network is unreachable')
+       sys.exit()
+
+def web_server():
+    os.chdir(os.path.join(CFGPATH, 'epg'))
+    server = threading.Thread(target=SimpleServer((get_selfip(), PORT), SimpleHTTPServer.SimpleHTTPRequestHandler).serve_forever)
+    server.setDaemon(True)
+    server.start()
 
 def get_category_title(cat, category_options):
     """Return the title override if set else the title
@@ -256,14 +283,14 @@ class Provider(object):
         self._panel_bouquet = {}
         self._category_order = []
         self._category_options = {}
-        self._dictchannels = OrderedDict()
-        self._xmltv_sources_list = None
+        self._dictchannels =OrderedDict()
+        self._xmltv_sources_list = {}
         self.config = config
 
     def _download_picon_file(self, service, total):
 
-        count, x = service 
-#        logo_url, title = x['tvg-logo'], slugify(get_service_title(x), replacements=[['&', 'and'], ['+', 'plus'], ['*', 'star']]) # for bouquet serviceref as a filename 
+        count, x = service
+#        logo_url, title = x['tvg-logo'], slugify(get_service_title(x), separator='', replacements=[['&', 'and'], ['+', 'plus'], ['*', 'star']]) # for bouquet DESCRIPTION as a filename
         logo_url, title = x['tvg-logo'], slugify(x['serviceRef'], separator='_', lowercase=False).upper() # for bouquet serviceref as a filename
 
         # Get the full picon file name with path without ext
@@ -273,7 +300,7 @@ class Provider(object):
             if DEBUG:
                 print("Picon file doesn't exist downloading\nPiconURL: {}".format(logo_url))
             try:
-                with requests.get(logo_url, headers=REQHEADERS, timeout=(5,30), verify=False) as r:
+                with requests.get(logo_url, headers=REQHEADERS, timeout=(5,30)) as r:
                     r.raise_for_status()
                     im = Image.open(BytesIO(r.content))
                     if im.format is None:
@@ -304,7 +331,7 @@ class Provider(object):
                      pos = service[10].rfind('/')
                      if pos != -1 and (pos + 1 != len(service[10])):
                          key = service[10][pos + 1:]
-                         value = ':'.join(service[1:9]) 
+                         value = ':'.join(service[1:9])
                          if value != '0:1:0:0:0:0:0:0:0':
                              # only add to dict if a custom service id is present
                              self._panel_bouquet[key] = value
@@ -316,7 +343,7 @@ class Provider(object):
         ext = os.path.splitext(parsed_stream_url.path)[1]
 
         # check for vod streams ending .*.m3u8 e.g. 2345.mp4.m3u8
-        is_m3u8_vod = re.search('\.[^/]+\.m3u8$', parsed_stream_url.path)
+        is_m3u8_vod = requests.utils.re.search('\.[^/]+\.m3u8$', parsed_stream_url.path)
 
         if (parsed_stream_url.path.endswith('ts') or parsed_stream_url.path.endswith('.m3u8')) \
                 or not ext \
@@ -412,7 +439,7 @@ class Provider(object):
                         sortedchannels = []
 
                         # find channels that are to be moved to this category (categoryOverride)
-                        for node in tree.findall(u'.//channel[@categoryOverride="{}"]'.format(cat)):
+                        for node in tree.findall('.//channel[@categoryOverride="{}"]'.format(cat)):
                             node_name = node.attrib.get('name')
                             category = node.attrib.get('category')
                             channel_index = None
@@ -430,7 +457,7 @@ class Provider(object):
 
                         listchannels = [x['stream-name'] for x in self._dictchannels[cat]]
 
-                        for node in tree.findall(u'.//channel[@category="{}"]'.format(cat)):
+                        for node in tree.findall('.//channel[@category="{}"]'.format(cat)):
                             # Check for placeholders, give unique name, insert into sorted channels and dictchannels[cat]
                             node_name = node.attrib.get('name')
 
@@ -458,7 +485,6 @@ class Provider(object):
                     category = override_channel.attrib.get('category')
                     category_override = override_channel.attrib.get('categoryOverride')
                     channel_index = None
-                    channels_list = None
 
                     if category_override:
                         # check if the channel has been moved to the new category
@@ -468,12 +494,9 @@ class Provider(object):
                         except KeyError:
                             pass
 
-                    if category_override and channel_index is not None:
-                        channels_list = self._dictchannels.get(category_override)
-                    else:
-                        channels_list = self._dictchannels.get(category)
+                    channels_list = self._dictchannels.get(category_override) if category_override and channel_index is not None else self._dictchannels.get(category)
 
-                    if channels_list is not None and name != 'placeholder':
+                    if channels_list and name != 'placeholder':
                         for x in channels_list:
                             if x['stream-name'] == name:
                                 if override_channel.attrib.get('enabled') == 'false':
@@ -482,7 +505,6 @@ class Provider(object):
                                 x['categoryOverride'] = override_channel.attrib.get('categoryOverride', '')
                                 # default to current values if attribute doesn't exist
                                 x['tvg-id'] = override_channel.attrib.get('tvg-id', x['tvg-id'])
-                                x['tvg-name'] = override_channel.attrib.get('tvg-name', x['tvg-name'])
                                 if override_channel.attrib.get('serviceRef', None) and self.config.sref_override:
                                     x['serviceRef'] = override_channel.attrib.get('serviceRef', x['serviceRef'])
                                     x['serviceRefOverride'] = True
@@ -502,8 +524,8 @@ class Provider(object):
 
     def _get_mapping_file(self):
         mapping_file = None
-        search_path = [os.path.join(CFGPATH, slugify(self.config.name)+'-sort-override.xml'),
-                       os.path.join(os.getcwd(), slugify(self.config.name)+'-sort-override.xml')]
+        search_path = [os.path.join(CFGPATH, 'epg', slugify(self.config.name)+'-sort-override.xml'),
+                       os.path.join(os.getcwd(), 'epg', slugify(self.config.name)+'-sort-override.xml')]
         for path in search_path:
             if os.path.isfile(path):
                 mapping_file = path
@@ -514,10 +536,10 @@ class Provider(object):
         """Add service to bouquet file
         """
         if not channel['stream-name'].startswith('placeholder_'):
-            f.write('#SERVICE {}:{}:{}\n'.format(channel['serviceRef'], quote(channel['stream-url'], ''), get_service_title(channel)))
+            f.write('#SERVICE {}:{}:{}\n'.format(channel['serviceRef'], quote(channel['stream-url'], safe="!#$%&'()*+,/;=?@[]~"), get_service_title(channel)))
             f.write('#DESCRIPTION {}\n'.format(get_service_title(channel)))
         else:
-            f.write('{}\n'.format(PLACEHOLDER_SERVICE)) 
+            f.write('{}\n'.format(PLACEHOLDER_SERVICE))
 
     def _get_bouquet_index_name(self, cat_filename, provider_filename):
         return ('#SERVICE 1:7:1:0:0:0:0:0:0:0:FROM BOUQUET "userbouquet.e2m3u2b_iptv_{}_{}.tv" ORDER BY bouquet\n'
@@ -573,7 +595,7 @@ class Provider(object):
             print("Creating: {}".format(bouquet_filepath))
 
         with open(bouquet_filepath, 'w+') as f:
-            f.write(u'#NAME {} - {}\n'.format(self.config.name, bouquet_name))
+            f.write('#NAME {} - {}\n'.format(self.config.name, bouquet_name))
 
             # write place holder channels (for channel numbering)
             for i in xrange(100):
@@ -586,7 +608,7 @@ class Provider(object):
                         cat_title = get_category_title(cat, self._category_options)
                         # Insert group description placeholder in bouquet
                         f.write('#SERVICE 1:64:0:0:0:0:0:0:0:0:\n')
-                        f.write(u'#DESCRIPTION {}\n'.format(cat_title))
+                        f.write('#DESCRIPTION {}\n'.format(cat_title))
                         for x in self._dictchannels[cat]:
                             if x.get('enabled') or x['stream-name'].startswith('placeholder_'):
                                 self._save_bouquet_entry(f, x)
@@ -606,37 +628,37 @@ class Provider(object):
         """Create CrossEPG source file
         """
         # Channels list xml
-        channels_filename = os.path.join(CFGPATH, 'e2m3u2b_iptv_{}_channels.xml'.format(slugify(self.config.name)))
+        channels_filename = 'http://{}:{}/e2m3u2b_iptv_{}_channels.xml.gz'.format(get_selfip(), PORT, slugify(self.config.name))
         # write providers epg feed
         source_filename = os.path.join(CROSSEPGPATH, 'e2m3u2b_iptv_{}.conf'.format(slugify(self.config.name)))
 
         with open(source_filename, 'w+') as f:
             f.write('description={}\n'.format(self.config.name))
             f.write('protocol=xmltv\n')
-            for source in enumerate(sources):
-                f.write('channels_url_{}={}\n'.format(source[0], channels_filename))
-                f.write('epg_url_{}={}\n'.format(*source))
+            for count, (k, v) in enumerate(sources.iteritems()):
+                f.write('channels_url_{}={}\n'.format(count, channels_filename))
+                f.write('epg_url_{}={}\n'.format(count, v[0]))
             f.write('preferred_language=eng\n')
 
     def _create_epgimport_source(self, sources, group=None):
-        """Create epg-importer source file
+        """Create EPG-importer source file
         """
+
         indent = "  "
         source_name = '{} - {}'.format(self.config.name, group) if group else self.config.name
-        channels_filename = os.path.join(CFGPATH, 'e2m3u2b_iptv_{}_channels.xml'.format(slugify(self.config.name)))
+        channels_filename = 'http://{}:{}/e2m3u2b_iptv_{}_channels.xml.gz'.format(get_selfip(), PORT, slugify(self.config.name))
 
         # write providers epg feed
         source_filename = os.path.join(EPGIMPORTPATH, 'e2m3u2b_iptv_{}.sources.xml'.format(slugify(source_name)))
 
         with open(source_filename, 'w+') as f:
             f.write('<sources>\n')
-            f.write('{}<sourcecat sourcecatname="IPTV Bouquet Maker - E2m3u2bouquet">\n'.format(indent))
-            f.write('{}<source type="gen_xmltv" nocheck="1" channels="{}">\n'
-                    .format(2 * indent, channels_filename))
-            f.write('{}<description>{}</description>\n'.format(3 * indent, xml_escape(source_name)))
-            for source in sources:
-                f.write('{}<url>{}</url>\n'.format(3 * indent, source))
-            f.write('{}</source>\n'.format(2 * indent))
+            f.write('{}<sourcecat sourcecatname="IPTV Bouquet Maker/E2m3u2bouquet">\n'.format(indent))
+            for k, v in sources.iteritems():
+                f.write('{}<source type="gen_xmltv" nocheck="1" channels="{}">\n'.format(2 * indent, channels_filename))
+                f.write('{}<description>{}</description>\n'.format(3 * indent, xml_escape(k)))
+                f.write('{}<url>{}</url>\n'.format(3 * indent, v[0]))
+                f.write('{}</source>\n'.format(2 * indent))
             f.write('{}</sourcecat>\n'.format(indent))
             f.write('</sources>\n')
 
@@ -645,15 +667,13 @@ class Provider(object):
         return requests.auth.hashlib.md5(self.config.name + cat.encode('utf-8')).hexdigest()[:8]
 
     def _extract_user_details_from_url(self):
-        """Extract username & password from m3u_url """
+        """Extract username & password from m3u_url
+           http://user:pass@NetLoc:80/path;parameters?query=argument#fragment
+        """
         if self.config.m3u_url:
             parsed = urlparse(self.config.m3u_url)
-            username_param = parse_qs(parsed.query).get('username')
-            if username_param:
-                self.config.username = username_param[0]
-            password_param = parse_qs(parsed.query).get('password')
-            if password_param:
-                self.config.password = password_param[0]
+            self.config.username = parsed.username if parsed.username else parse_qs(parsed.query).get('username',[''])[0]
+            self.config.password = parsed.password if parsed.password else parse_qs(parsed.query).get('password',[''])[0]
 
     @staticmethod
     def _update_status(name, message):
@@ -739,6 +759,22 @@ class Provider(object):
             return self._process_provider_update()
         return False
 
+    def download_epg(self):
+        """Get EPG file from link in some cases
+        """
+        try:
+            fname = self.config.epg_url[self.config.epg_url.rfind("/")+1:]
+            with requests.get(self.config.epg_url, headers=REQHEADERS, timeout=(5,30), stream=True, allow_redirects=True) as epg, \
+                open(os.path.join(CFGPATH, 'epg', fname), 'wb') as f:
+                    epg.raise_for_status()
+                    for chunk in epg.iter_content(chunk_size=8192):
+                        f.write(chunk)
+            self.config.epg_url = 'http://{}:{}/{}'.format(get_selfip(), PORT, fname)
+        except Exception, e:
+            if DEBUG:
+                raise e
+            pass
+
     def download_m3u(self):
         """Get M3U file and parse it
 
@@ -758,22 +794,17 @@ class Provider(object):
             s = requests.Session()
             s.mount('file://', FileAdapter())
             s.stream = True
-            s.verify = False
             # Get playlist from URL or local m3u M3U ('file:///path/to/file')
             with s.get(self.config.m3u_url, headers=REQHEADERS, timeout=(5,30)) as r:
                 r.raise_for_status()
                 Provider._update_status(self.config.name, 'Parsing channels in M3U')
                 print(Status.message)
-
-                pattern = re.compile(r'.*?(url-tvg|url-epg|url-logo|tvg-id|tvg-name|tvg-logo|tvg-language|tvg-country|group-title)=[\'"](.*?)[\'"]')
-
+                # Local M3U TAGs
+                tag_pattern = requests.utils.re.compile(r'.*?(tvg-id|tvg-name|tvg-logo|tvg-language|tvg-country|group-title)=[\'"](.*?)[\'"]')
                 def service_dict_template():
-                    dict = {}.fromkeys(['url-tvg', 'url-epg', 'url-logo', 'tvg-id', 'tvg-name', 'tvg-logo', 'tvg-language', 'tvg-country',
-                                        'nameOverride', 'categoryOverride', 'serviceRef',
-                                       ], '')
-                    dict.update({'group-title': u'NoGroup', 'category_type': 'live', 'has_archive': False,
-                                 'enabled': True, 'serviceRefOverride': False,
-                                })
+                    dict = {}.fromkeys(['tvg-id', 'tvg-name', 'tvg-logo', 'tvg-language', 'tvg-country',
+                                        'nameOverride', 'categoryOverride', 'serviceRef', ], '')
+                    dict.update({'group-title': u'NoGroup', 'category_type': 'live', 'has_archive': False, 'enabled': True, 'serviceRefOverride': False, })
                     return dict
 
                 service_dict = service_dict_template()
@@ -782,59 +813,58 @@ class Provider(object):
                     line = line.decode('utf-8-sig')
 
                     if line.startswith('#EXTM3U'):
+                        # Global M3U TAGs url-tvg|url-epg|url-logo
                         service_dict.update({k:v.strip('"') for k,v in [x.split('=') for x in line.split() if '=' in x]})
-                        urllogo = service_dict.get('url-logo')
-                        if not self.config.epg_url:
-                            urlepg = service_dict.get('url-tvg')
-                            if not urlepg:
-                                urlepg = service_dict.get('url-epg')
-                            if urlepg and urlepg.startswith(('http://', 'https://')):
-                                self.config.epg_url = urlepg
-                            else:
-                                #Set default epg
-                                self.config.epg_url = DEFAULTEPG
+                        urllogo = service_dict.get('url-logo', '')
+                        if self.config.epg_url == '':
+                            self.config.epg_url = service_dict.get('url-tvg', service_dict.get('url-epg', DEFAULTEPG))
+                        if not self.config.epg_url.startswith(('http://', 'https://')) or len(self.config.epg_url.split(','))>1:
+                            self.config.epg_url = DEFAULTEPG
+                        if self.config.epg_url.startswith('https://'):
+                            self.download_epg()
+                        service_dict = service_dict_template()
                         continue
 
                     elif line.startswith('#EXTINF:'):
                         try:
                             extInfData, name = line.split(',')
                         except:
-                            extInfData, name = line, ''
+                            extInfData, name = line, None
 
-                        service_dict.update(dict(pattern.findall(extInfData)))
-                        if name == '':
+                        service_dict.update(dict(tag_pattern.findall(extInfData)))
+
+                        if name is None:
                             name = service_dict.get('tvg-name')
                             if name == '':
                                 if DEBUG:
                                     print("No TITLE info found for this service - skip")
                                 continue
- 
-                        service_dict.update({'stream-name': name.strip()})
-                        tvglogo = service_dict.get('tvg-logo')
-                        if tvglogo !='' and not tvglogo.startswith(('http://', 'https://')) \
-                                and urllogo and urllogo.startswith(('http://', 'https://')):
-                            service_dict['tvg-logo'] = logourl+tvglogo  
 
-                    elif line.startswith('#EXTGRP:') and service_dict.get('stream-name', '') != '':
+                        service_dict.update({'stream-name': name.strip()})
+
+                        tvglogo = service_dict.get('tvg-logo')
+                        if tvglogo != '' and not tvglogo.startswith(('http://', 'https://')) and urllogo.startswith(('http://', 'https://')):
+                            service_dict.update({'tvg-logo':'{}{}'.format(logourl, tvglogo)})
+
+                    elif line.startswith('#EXTGRP:') and service_dict.get('stream-name'):
                         if service_dict.get('group-title') == u'NoGroup':
                             try:
-                                service_dict['group-title'] = line.split(':')[1].strip()
+                                service_dict.update({'group-title': line.split(':')[1].strip()})
                             except:
                                 pass
-
-                    elif line.startswith(('http://', 'https://', 'rtsp://', 'rtmp://')) and service_dict.get('stream-name', '') != '':
-                        service_dict['stream-url'] = line
+                    elif line.startswith(('http', 'https', 'rtsp', 'rtp', 'mmp')) and service_dict.get('stream-name'):
+                        service_dict.update({'stream-url': line.strip()})
                         self._set_streamtypes_vodcats(service_dict)
                         #Set default name for any blank groups and update channels dict
                         self._dictchannels.setdefault(service_dict['group-title'].decode('utf-8'), []).append(service_dict)
                         service_dict = service_dict_template()
 
-                if not self._dictchannels:
-                    print("No extended playlist info found. Check m3u url should be 'type=m3u_plus'")
+            if not self._dictchannels:
+                print("No extended playlist info found. Check m3u url should be 'type=m3u_plus'")
 
         except Exception, e:
             if DEBUG:
-                raise e 
+                raise e
             Provider._update_status(self.config.name, 'Unable to download m3u file')
             print(Status.message)
 
@@ -868,7 +898,8 @@ class Provider(object):
 
                 for x in self._dictchannels[cat]:
                     cat_id = self._get_category_id(cat)
-#                                  #"SID:TID:ONID:Namespace"
+#                                  "SID:TID:ONID:Namespace"
+#                                  {:04x}:{:04x}:{:04x}:{:08x}
                     service_ref = '{:04x}:{}:{}:{}'.format(num, cat_id[:4], cat_id[4:], NAMESPACE)
 
                     if not x['stream-name'].startswith('placeholder_'):
@@ -962,16 +993,16 @@ class Provider(object):
                 raise
 
         for cat in self._dictchannels:
-            Provider._update_status(self.config.name, u'Update picons for {}'.format(cat))
-            print(Status.message) 
+            Provider._update_status(self.config.name, 'Update picons for {}'.format(cat))
+            print(Status.message)
             # Download picons if not VOD
-            services = [ x for x in self._dictchannels[cat] 
-                         if self._category_options[cat].get('type', 'live') == 'live'
+            services = [ x for x in self._dictchannels[cat]
+                             if self._category_options[cat].get('type', 'live') == 'live'
                              and not x['stream-name'].startswith('placeholder_')
-                             and x['tvg-logo'] 
+                             and x['tvg-logo']
                              and urlparse(x['tvg-logo']).scheme in ('http','https') ]
             total = len(services)
-            map(lambda x: self._download_picon_file(x, total), enumerate(services,start=1))
+            map(lambda x: self._download_picon_file(x, total), enumerate(services, start=1))
 
         Provider._update_status(self.config.name, 'Picons download completed')
         print(Status.message)
@@ -986,7 +1017,7 @@ class Provider(object):
             try:
                 tree = ET.ElementTree(file=mapping_file)
                 for group in tree.findall('.//xmltvextrasources/group'):
-                    self._xmltv_sources_list[group.attrib.get('id')] = [url.text for url in group] # Group-name list
+                    self._xmltv_sources_list['{} - {}'.format(self.config.name, group.attrib.get('id'))] = [url.text for url in group] # Group-name list
             except Exception:
                 msg = 'Corrupt override.xml file'
                 print(msg)
@@ -995,7 +1026,7 @@ class Provider(object):
 
     def save_map_xml(self):
         """Create mapping file"""
-        mappingfile = os.path.join(CFGPATH, slugify(self.config.name)+'-sort-current.xml')
+        mappingfile = os.path.join(CFGPATH, 'epg', slugify(self.config.name)+'-sort-current.xml')
         indent = "  "
         vod_category_output = False
 
@@ -1007,16 +1038,26 @@ class Provider(object):
                 f.write('{} Disable bouquets or channels by setting enabled to "false"\r\n'.format(indent))
                 f.write('{} Map DVB EPG to IPTV by changing channel serviceRef attribute to match DVB service reference\r\n'.format(indent))
                 f.write('{} Map XML EPG to different feed by changing channel tvg-id attribute\r\n'.format(indent))
-                f.write('{} Map XML EPG to different feed by changing channel tvg-name attribute\r\n'.format(indent))
                 f.write('{} Rename this file as {}-sort-override.xml for changes to apply\r\n'.format(indent, slugify(self.config.name)))
                 f.write('-->\r\n')
 
                 f.write('<mapping>\r\n')
-
                 f.write('{}<xmltvextrasources>\r\n'.format(indent))
                 if not self._xmltv_sources_list:
                     # output example config
                     f.write('{}<!-- Example Config\r\n'.format((2 * indent)))
+                    # IPTV EPG by R.Rusya (gz)
+                    f.write('{}<group id="{}">\r\n'.format(2 * indent, 'EPG openboxfan full by R.Rusya for IPTV'))
+                    f.write('{}<url>{}</url>\r\n'.format(3 * indent, 'http://epg.openboxfan.com/xmltv-t-sd.xml.gz'))
+                    f.write('{}</group>\r\n'.format(2 * indent))
+                    # IPTV EPG by Igor-K (gz)
+                    f.write('{}<group id="{}">\r\n'.format(2 * indent, 'EPG by Igor-K for IPTV'))
+                    f.write('{}<url>{}</url>\r\n'.format(3 * indent, 'http://runigma.com.ua/EPG/IPTV/epg-iptv.xml.gz'))
+                    f.write('{}</group>\r\n'.format(2 * indent))
+                    # IPTV EPG by iptvx.one project (gz)
+                    f.write('{}<group id="{}">\r\n'.format(2 * indent, 'EPG by iptvx.one for IPTV'))
+                    f.write('{}<url>{}</url>\r\n'.format(3 * indent, 'http://iptvx.one/epg/epg.xml.gz'))
+                    f.write('{}</group>\r\n'.format(2 * indent))
                     # UK - Freeview (xz)
                     f.write('{}<group id="{}">\r\n'.format(2 * indent, 'UK - Freeview (xz)'))
                     f.write('{}<url>{}</url>\r\n'.format(3 * indent, 'http://www.xmltvepg.nl/rytecUK_Basic.xz'))
@@ -1080,7 +1121,7 @@ class Provider(object):
                     if cat in self._dictchannels:
                         if self._category_options[cat].get('type', 'live') == 'live':
                             cat_title_override = self._category_options[cat].get('nameOverride', '')
-                            f.write(u'{}<category name="{}" nameOverride="{}" idStart="{}" enabled="{}" customCategory="{}"/>\r\n'
+                            f.write('{}<category name="{}" nameOverride="{}" idStart="{}" enabled="{}" customCategory="{}"/>\r\n'
                                     .format(2 * indent,
                                             xml_escape(cat),
                                             xml_escape(cat_title_override),
@@ -1095,7 +1136,7 @@ class Provider(object):
                             if 'VOD' in self._category_options:
                                 cat_title_override = self._category_options['VOD'].get('nameOverride', '')
                                 cat_enabled = self._category_options['VOD'].get('enabled', True)
-                            f.write(u'{}<category name="{}" nameOverride="{}" enabled="{}" />\r\n'
+                            f.write('{}<category name="{}" nameOverride="{}" enabled="{}" />\r\n'
                                     .format(2 * indent, 'VOD', xml_escape(cat_title_override), str(cat_enabled).lower()))
                             vod_category_output = True
 
@@ -1106,22 +1147,21 @@ class Provider(object):
                     if cat in self._dictchannels:
                         # Don't output any of the VOD channels
                         if self._category_options[cat].get('type', 'live') == 'live':
-                            f.write(u'{}<!-- {} -->\r\n'.format(2 * indent, xml_escape(cat)))
+                            f.write('{}<!-- {} -->\r\n'.format(2 * indent, xml_escape(cat)))
                             for x in self._dictchannels[cat]:
                                 if not x['stream-name'].startswith('placeholder_'):
-                                    f.write(u'{}<channel name="{}" nameOverride="{}" tvg-id="{}" tvg-name="{}" enabled="{}" category="{}" categoryOverride="{}" serviceRef="{}" clearStreamUrl="{}" />\r\n'
+                                    f.write('{}<channel name="{}" nameOverride="{}" tvg-id="{}" enabled="{}" category="{}" categoryOverride="{}" serviceRef="{}" clearStreamUrl="{}" />\r\n'
                                             .format(2 * indent,
                                                     xml_escape(x['stream-name']),
                                                     xml_escape(x.get('nameOverride', '')),
                                                     xml_escape(x['tvg-id']),
-                                                    xml_escape(x['tvg-name']),
                                                     str(x['enabled']).lower(),
                                                     xml_escape(x['group-title']),
                                                     xml_escape(x.get('categoryOverride', '')),
                                                     xml_escape(x['serviceRef']),'false' if x['stream-url'] else 'true'
                                                     ))
                                 else:
-                                    f.write(u'{}<channel name="{}" category="{}" />\r\n'.format(2 * indent, 'placeholder', xml_escape(cat)))
+                                    f.write('{}<channel name="{}" category="{}" />\r\n'.format(2 * indent, 'placeholder', xml_escape(cat)))
 
                 f.write('{}</channels>\r\n'.format(indent))
                 f.write('</mapping>')
@@ -1150,9 +1190,8 @@ class Provider(object):
         # and forcibly create all channels bouquet, but if some of the playlist entries
         # have a group-title tag, and some are not, then for those who are absent,
         # we assign the default group "NoGroup" in download_m3u()
-      
         if len(self._category_order)==1 and self._category_order[0]==u'NoGroup':
-            Provider._update_status(self.config.name, 'The list of playlist groups is empty. Create all channels bouquet only!') 
+            Provider._update_status(self.config.name, 'The list of playlist groups is empty. Create all channels bouquet only!')
             print(Status.message)
             # write the bouquets.tv indexes
             if not self.config.all_bouquet:
@@ -1182,7 +1221,7 @@ class Provider(object):
 
                 if cat not in vod_categories or self.config.multi_vod:
                     with open(bouquet_filepath, 'w+') as f:
-                        bouquet_name = u'{} - {}'.format(self.config.name, cat_title).decode("utf-8")
+                        bouquet_name = '{} - {}'.format(self.config.name, cat_title).decode("utf-8")
                         if self._category_options[cat].get('type', 'live') == 'live':
                             if cat in self._category_options and self._category_options[cat].get('nameOverride', False):
                                 bouquet_name = self._category_options[cat]['nameOverride'].decode('utf-8')
@@ -1192,7 +1231,7 @@ class Provider(object):
                                     .format(self._category_options['VOD']['nameOverride'].decode('utf-8'),
                                             cat_title.replace('VOD - ', '').decode("utf-8"))
                         channel_num = 0
-                        f.write(u'#NAME {}\n'.format(bouquet_name))
+                        f.write('#NAME {}\n'.format(bouquet_name))
                         if not channel_number_start_offset_output and not self.config.all_bouquet:
                             # write place holder services (for channel numbering)
                             for i in xrange(100):
@@ -1228,7 +1267,7 @@ class Provider(object):
                             if vodcat in self._dictchannels:
                                 # Insert group description placeholder in bouquet
                                 f.write('#SERVICE 1:64:0:0:0:0:0:0:0:0:\n')
-                                f.write(u'#DESCRIPTION {}\n'.format(vodcat))
+                                f.write('#DESCRIPTION {}\n'.format(vodcat))
                                 for x in self._dictchannels[vodcat]:
                                     self._save_bouquet_entry(f, x)
                                     channel_num += 1
@@ -1256,50 +1295,55 @@ class Provider(object):
             print('creating EPG config')
         # create channels file
         try:
-            os.makedirs(CFGPATH)
+            os.makedirs(os.path.join(CFGPATH, 'epg'))
         except OSError, e:  # race condition guard
             if e.errno != errno.EEXIST:
                 raise
 
-        channels_filename = os.path.join(CFGPATH, 'e2m3u2b_iptv_{}_channels.xml'.format(slugify(self.config.name)))
-
         if self._dictchannels:
-            with open(channels_filename, 'w+') as f:
+            with gzip.open(os.path.join(CFGPATH, 'epg', 'e2m3u2b_iptv_{}_channels.xml.gz'.format(slugify(self.config.name))), 'wt') as f:
                 f.write('<?xml version="1.0" encoding="utf-8"?>\n')
                 f.write('<!-- Automatically generated by the e2m3u2b for {} -->\n'.format(xml_escape(self.config.name)))
                 f.write('<channels>\n')
+
                 for cat in self._category_order:
                     if cat in self._dictchannels and self._category_options.get(cat, {}).get('enabled', True):
                         if self._category_options[cat].get('type', 'live') == 'live':
                             cat_title = get_category_title(cat, self._category_options)
-
                             f.write('{}<!-- {} -->\n'.format(indent, xml_escape(cat_title)))
-                            for x in self._dictchannels[cat]:
-                                if not x['stream-name'].startswith('placeholder_'):
-                                    tvg_id = x.get('tvg-id', '')
-                                    if tvg_id == '':
-                                        tvg_id = x.get('tvg-name', '')
-                                    if tvg_id == '' and self.config.epg_url == DEFAULTEPG: 
-                                        url = x.get('stream-url', '')
-#                                        tvg_id = url[url.rfind("/")+1:].split('.')[0]
-                                        tvg_id = slugify(get_service_title(x))
 
-                                    if x['enabled']:
-                                        f.write('{}<channel id="{}">{}:</channel> <!-- {} -->\n'
-                                                .format(indent, xml_escape(tvg_id),
-                                                           x['serviceRef'].replace(x['stream-type'], '1', 1), # force the epg channels to stream type '1'
-                                                               xml_escape(get_service_title(x))))
+                            for x in self._dictchannels[cat]:
+                                tvg_id = x.get('tvg-id')
+                                if tvg_id == '':
+                                    tvg_id = slugify(get_service_title(x),
+                                                     replacements=[
+                                                                   ['A1', 'amedia1'],
+                                                                   ['A2', 'amedia2'],
+                                                                   ['ый', 'iy'],
+                                                                   ['ий', 'iy'],
+                                                                   ['ия 1', 'iya'],
+                                                                   ['мье', 'me'],
+                                                                   ['я', 'ya'],
+                                                                   ['х', 'h'],
+                                                                   [' +2', 'plus2'],
+                                                                   [' +4', 'plus4'],
+                                                                   [' +6', 'plus6'],
+                                                                   [' +7', 'plus7'],
+                                                                   [' +8', 'plus8'],
+                                                                   ['+', 'plus'],
+                                                                  ])
+                                if x['enabled']:
+                                    f.write('{}<channel id="{}">{}:</channel> <!-- {} -->\n'
+                                            .format(indent, xml_escape(tvg_id),
+                                                       x['serviceRef'].replace(x['stream-type'], '1', 1), # force the epg channels to stream type '1'
+                                                           xml_escape(get_service_title(x))))
                 f.write('</channels>\n')
 
+            self._xmltv_sources_list.update({'{} - {}'.format(self.config.name, 'Main EPG'): [self.config.epg_url]})
             # create epg-importer sources file for providers feed
-            self._create_epgimport_source([self.config.epg_url])
-
+            self._create_epgimport_source(self._xmltv_sources_list)
             # create CrossEPG sources file for providers feed
-            self._create_crossepg_source([self.config.epg_url])
-
-            # create epg-importer sources file for additional feeds
-            for group in self._xmltv_sources_list:
-                self._create_epgimport_source(self._xmltv_sources_list[group], group)
+            self._create_crossepg_source(self._xmltv_sources_list)
 
 class Config(object):
     def __init__(self):
@@ -1366,7 +1410,7 @@ class Config(object):
             tree = ET.ElementTree(file=configfile)
             for node in tree.findall('.//supplier'):
                 provider = ProviderConfig()
-                
+
                 if node is not None:
                     for child in node:
                         if child.tag == 'name':
@@ -1592,6 +1636,9 @@ USAGE
         return 2
 
 if __name__ == "__main__":
+    try:
+        web_server()
+    except: pass
     if TESTRUN:
         EPGIMPORTPATH = "H:/Satelite Stuff/epgimport/"
         CROSSEPGPATH = "H:/Satelite Stuff/usr/crossepg/providers/"
