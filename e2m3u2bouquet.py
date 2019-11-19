@@ -50,9 +50,9 @@ except ImportError:
     pass
 
 __all__ = []
-__version__ = '0.9.5'
+__version__ = '0.9.7.2'
 __date__ = '2017-06-04'
-__updated__ = '2019-11-11'
+__updated__ = '2019-11-18'
 
 DEBUG = 0
 TESTRUN = 0
@@ -190,7 +190,7 @@ def reload_bouquets():
             r.reloadServicelist()
             r.reloadBouquets()
         except:
-            r = requests.get('http://127.0.0.1/web/servicelistreload?mode=2', timeout=5) # reload Servicelist & Bouquets 
+            r = requests.get('http://127.0.0.1/web/servicelistreload?mode=2', timeout=5) # reload Servicelist & Bouquets
             r.close()
         print('bouquets reloaded...')
 
@@ -775,13 +775,29 @@ class Provider(object):
                 raise e
             pass
 
+    def get_tvgid(self, title):
+        return slugify(title,
+                       replacements=[
+                                     ['A1', 'amedia1'], ['A2', 'amedia2'],
+                                     ['international', 'int'],
+                                     ['ый', 'iy'],
+                                     ['ий', 'iy'],
+                                     ['сю', 'syu'],
+                                     ['лю', 'lyu'],
+                                     ['мье', 'me'],
+                                     ['ї', 'i'],
+                                     ['я', 'ya'],
+                                     ['х', 'h'],
+                                     [' +2', 'plus2'], [' +4', 'plus4'], [' +6', 'plus6'], [' +7', 'plus7'], [' +8', 'plus8'], ['+', 'plus'],
+                                    ])
+
     def download_m3u(self):
         """Get M3U file and parse it
 
         tags description: https://howlingpixel.com/i-en/M3U
         m3u example:
 
-        #EXTM3U url-tvg="http://tvguide.epg:8000/1234/987654321.xml" url-logo="http://www.logoserver.com/logos/" m3uautoload=1 cache=1500 deinterlace=auto 
+        #EXTM3U url-tvg="http://tvguide.epg:8000/1234/987654321.xml" url-logo="http://www.logoserver.com/logos/" m3uautoload=1 cache=1500 deinterlace=auto
         #EXTINF:0 tvg-name="Important Channel" tvg-language="English" tvg-country="US" tvg-id="imp-001" tvg-logo="http://pathlogo/logo.jpg" group-title="Top10", Discovery Channel cCloudTV.ORG (Top10) (US) (English)
         #EXTGRP:Top10  (optional derective)
         http://167.114.102.27/live/Eem9fNZQ8r_FTl9CXevikA/1461268502/a490ae75a3ec2acf16c9f592e889eb4c.m3u8|User-Agent=Mozilla%2F5.0%20(Windows%20NT%206.1%3B%20WOW64)%20AppleWebKit%2F537.36%20(KHTML%2C%20like%20Gecko)%20Chrome%2F47.0.2526.106%20Safari%2F537.36
@@ -839,12 +855,14 @@ class Provider(object):
                                 if DEBUG:
                                     print("No TITLE info found for this service - skip")
                                 continue
-
-                        service_dict.update({'stream-name': name.strip()})
+                        name = name.strip()
+                        service_dict.update({'stream-name': name})
 
                         tvglogo = service_dict.get('tvg-logo')
                         if tvglogo != '' and not tvglogo.startswith(('http://', 'https://')) and urllogo.startswith(('http://', 'https://')):
                             service_dict.update({'tvg-logo':'{}{}'.format(logourl, tvglogo)})
+                        if self.config.epg_url == DEFAULTEPG:
+                            service_dict.update({'tvg-id': self.get_tvgid(name)})
 
                     elif line.startswith('#EXTGRP:') and service_dict.get('stream-name'):
                         if service_dict.get('group-title') == u'NoGroup':
@@ -1290,7 +1308,6 @@ class Provider(object):
         print(Status.message)
 
     def create_epg_config(self):
-        indent = "  "
         if DEBUG:
             print('creating EPG config')
         # create channels file
@@ -1299,6 +1316,8 @@ class Provider(object):
         except OSError, e:  # race condition guard
             if e.errno != errno.EEXIST:
                 raise
+        indent = "  "
+        tvg_check = []
 
         if self._dictchannels:
             with gzip.open(os.path.join(CFGPATH, 'epg', 'e2m3u2b_iptv_{}_channels.xml.gz'.format(slugify(self.config.name))), 'wt') as f:
@@ -1307,38 +1326,25 @@ class Provider(object):
                 f.write('<channels>\n')
 
                 for cat in self._category_order:
-                    if cat in self._dictchannels and self._category_options.get(cat, {}).get('enabled', True):
+                     if cat in self._dictchannels and self._category_options.get(cat, {}).get('enabled', True):
                         if self._category_options[cat].get('type', 'live') == 'live':
                             cat_title = get_category_title(cat, self._category_options)
                             f.write('{}<!-- {} -->\n'.format(indent, xml_escape(cat_title)))
 
                             for x in self._dictchannels[cat]:
-                                tvg_id = x.get('tvg-id')
-                                if tvg_id == '':
-                                    tvg_id = slugify(get_service_title(x),
-                                                     replacements=[
-                                                                   ['A1', 'amedia1'],
-                                                                   ['A2', 'amedia2'],
-                                                                   ['ый', 'iy'],
-                                                                   ['ий', 'iy'],
-                                                                   ['ия 1', 'iya'],
-                                                                   ['мье', 'me'],
-                                                                   ['я', 'ya'],
-                                                                   ['х', 'h'],
-                                                                   [' +2', 'plus2'],
-                                                                   [' +4', 'plus4'],
-                                                                   [' +6', 'plus6'],
-                                                                   [' +7', 'plus7'],
-                                                                   [' +8', 'plus8'],
-                                                                   ['+', 'plus'],
-                                                                  ])
                                 if x['enabled']:
+                                    tvg_id = x.get('tvg-id')
+                                    if tvg_id == '':
+                                        tvg_check.append(True)
+                                        tvg_id = self.get_tvgid(get_service_title(x))  # force to default value if tvg-id is empty
                                     f.write('{}<channel id="{}">{}:</channel> <!-- {} -->\n'
                                             .format(indent, xml_escape(tvg_id),
                                                        x['serviceRef'].replace(x['stream-type'], '1', 1), # force the epg channels to stream type '1'
                                                            xml_escape(get_service_title(x))))
                 f.write('</channels>\n')
 
+            if any(tvg_check) and self.config.epg_url != DEFAULTEPG:
+                self._xmltv_sources_list.update({'{} - {}'.format(self.config.name, 'Default EPG'): [DEFAULTEPG]})
             self._xmltv_sources_list.update({'{} - {}'.format(self.config.name, 'Main EPG'): [self.config.epg_url]})
             # create epg-importer sources file for providers feed
             self._create_epgimport_source(self._xmltv_sources_list)

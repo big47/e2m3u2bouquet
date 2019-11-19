@@ -1,0 +1,355 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: E2m3u2bouqet\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2019-11-17 16:10+0200\n"
+"PO-Revision-Date: 2019-11-17 16:10+0200\n"
+"Language: ru_RU\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: about.py:18 about.py:19 menu.py:78
+msgid "About"
+msgstr "Информация"
+
+#: about.py:30 menu.py:258 menu.py:277 menu.py:326
+msgid "Close"
+msgstr "Закрыть"
+
+#: menu.py:62 menu.py:167
+msgid "Exit"
+msgstr "Выход"
+
+#: menu.py:63 menu.py:168
+msgid "Select"
+msgstr "Выбор"
+
+#: menu.py:72 menu.py:151
+msgid "Configure"
+msgstr "Конфигурация"
+
+#: menu.py:73 providers.py:40
+msgid "Providers"
+msgstr "Провайдеры"
+
+#: menu.py:74
+msgid "Create Bouquets"
+msgstr "Создать букеты"
+
+#: menu.py:75 menu.py:248
+msgid "Status"
+msgstr "Статус"
+
+#: menu.py:76
+msgid "Reset Bouquets"
+msgstr "Сбросить букеты"
+
+#: menu.py:77
+msgid "Show log"
+msgstr "Показать лог"
+
+#: menu.py:127                                                                                                                                                 
+msgid ""
+"This will remove the IPTV Bouquets\n"
+"and Epg Importer configs\n"
+"that have been created.\n"
+"Proceed?"
+msgstr ""
+"Это удалит все IPTV букеты\n"
+"и ранее созданную конфигурацию\n"
+"плагина EPGImporter.\n"
+"Продолжать?"
+
+#: menu.py:178
+msgid "Automatic bouquet update (schedule):"
+msgstr "Автоматическое обновление букетов (по расписанию):"
+
+#: menu.py:178
+msgid "Enable to update bouquets on a schedule"
+msgstr "Включить обновление букетов по расписанию"
+
+#: menu.py:180
+msgid "Schedule type:"
+msgstr "Тип расписания:"
+
+#: menu.py:180
+msgid "Choose either a fixed time or an hourly update interval"
+msgstr "Выберите фиксированное время или почасовой интервал обновления"
+
+#: menu.py:182
+msgid "Update interval (hours):"
+msgstr "Интервал обновления (часы):"
+
+#: menu.py:182
+msgid "Set the number of hours between automatic bouquet updates"
+msgstr "Установите количество часов между автоматическим обновлением букетов"
+
+#: menu.py:184
+msgid "Time to start update:"
+msgstr "Время начала обновления:"
+
+#: menu.py:184
+msgid "Set the day of time to perform the bouquet update"
+msgstr "Установите день для обновления букетов"
+
+#: menu.py:185
+msgid "Automatic bouquet update (when box starts):"
+msgstr "Автоматическое обновление букетов (при включении ресивера):"
+
+#: menu.py:185
+msgid "Update bouquets at startup"
+msgstr "Обновлять букеты при включении ресивера"
+
+#: menu.py:186
+msgid "Picon save path:"
+msgstr "Путь сохранения пиконов"
+
+#: menu.py:186
+msgid "Select where to save picons (if download is enabled)"
+msgstr "Выберите, где сохранять пиконы (если их загрузка включена)"
+
+#: menu.py:187
+msgid "Attempt Epg Import"
+msgstr "Пытаться импортировать EPG"
+
+#: menu.py:187
+msgid "Automatically run Epg Import after bouquet update"
+msgstr "Автоматически запускать EPGImporter после обновления букетов"
+
+#: menu.py:188
+msgid "Show in extensions:"
+msgstr "Показать в расширениях:"
+
+#: menu.py:188
+msgid "Show in extensions menu"
+msgstr "Показать в меню расширений"
+
+#: menu.py:189
+msgid "Show in main menu:"
+msgstr "Показать в основном меню:"
+
+#: menu.py:189
+msgid "Show in main menu"
+msgstr "Показать в основном меню"
+
+#: menu.py:190
+msgid "Debug mode:"
+msgstr "Режим отладки:"
+
+#: menu.py:190
+msgid "Enable debug mode. Do not enable unless requested"
+msgstr "Включение режима отладки. Не активируйте данный режим без необходимости"
+
+#: menu.py:237
+msgid "Really close without saving settings?"
+msgstr "Выйти без сохранения настроек?"
+
+#: menu.py:278 providers.py:164
+msgid "Save"
+msgstr "Сохранить"
+
+#: menu.py:279
+msgid "Clear"
+msgstr "Очистить"
+
+#: menu.py:308
+msgid "Log file has been saved to the tmp directory"
+msgstr "Лог файл будет сохранен в папку tmp вашего ресивера"
+
+#: menu.py:358
+msgid "Update still in progress. Please wait."
+msgstr "В процессе обновления. Пожалуйста, подождите."
+
+#: menu.py:363 plugin.py:349
+msgid ""
+"Update of channels will start.\n"
+"This may take a few minutes.\n"
+"Proceed?"
+msgstr ""
+"Запуск обновления каналов.\n"
+"Это может занять некоторое время.\n"
+"Продолжить?"
+
+#: plugin.py:390
+msgid "Automated M3U playlists importer"
+msgstr "Автоматический импортер M3U плейлистов"
+
+#: menu.py:399
+msgid ""
+"EPG Import not found\n"
+"Please install the EPG Import plugin"
+msgstr ""
+"EPGImporter не обнаружен\n"
+"Пожалуйста, уcтановите плагин EPGImporter"
+
+#: providers.py:57 providers.py:163
+msgid "Cancel"
+msgstr "Отменить"
+
+#: providers.py:58
+msgid "Add"
+msgstr "Добавить"
+
+#: providers.py:143
+msgid "Provider"
+msgstr "Провайдер"
+
+#: providers.py:165 providers.py:227
+msgid "Delete"
+msgstr "Удалить"
+
+#: providers.py:226
+msgid "Name"
+msgstr "Имя"
+
+#: providers.py:226
+msgid "Provider name"
+msgstr "Имя провайдера"
+
+#: providers.py:227
+#, python-format
+msgid "Delete provider %s"
+msgstr "Удалить провайдера %s"
+
+#: providers.py:229
+msgid "Enabled"
+msgstr "Доступен"
+
+#: providers.py:229
+#, python-format
+msgid "Enable provider %s"
+msgstr "Разрешить создание букетов для провайдера: %s"
+
+#: providers.py:231
+msgid "Setup mode"
+msgstr "Режим настроек"
+
+#: providers.py:231
+msgid "Choose level of settings. Expert shows all options"
+msgstr "Выберете режим настроек. В expert доступны все настройки"
+
+#: providers.py:232
+msgid "Providers M3U url. USERNAME & PASSWORD will be replaced by values below"
+msgstr "Ссылка на M3U провайдера. USERNAME & PASSWORD будут автоматически заменены в url"
+
+#: providers.py:233
+msgid "Used EPG:"
+msgstr "Используемое EPG:"
+
+#: providers.py:233
+msgid "If selected default, the plugin will use a predefined EPG by r.rusya"
+msgstr "Если вы выберете default, то будет использоваться EPG by r.rusya по умолчанию"
+
+#: providers.py:235
+msgid "Providers EPG url. USERNAME & PASSWORD will be replaced by values below"
+msgstr "Ссылка на EPG провайдера. USERNAME & PASSWORD будут автоматически заменены в url"
+
+#: providers.py:236
+msgid "Username"
+msgstr "Имя пользователя"
+
+#: providers.py:236
+msgid "If set will replace USERNAME placeholder in urls"
+msgstr "Если задано,то заменит шаблон-заполнитель USERNAME в URL"
+
+#: providers.py:237
+msgid "Password"
+msgstr "Пароль"
+
+#: providers.py:237
+msgid "If set will replace PASSWORD placeholder in urls"
+msgstr "Если задано,то заменит шаблон-заполнитель PASSWORD в URL"
+
+#: providers.py:238
+msgid "Multi VOD"
+msgstr ""
+
+#: providers.py:238
+msgid "Enable to create multiple VOD bouquets rather than single VOD bouquet"
+msgstr "Позволяет создавать несколько букетов VOD вместо одного букета VOD"
+
+#: providers.py:239
+msgid "Picons"
+msgstr "Пиконы"
+
+#: providers.py:239
+msgid "Automatically download Picons"
+msgstr "Автоматически загружать пиконы"
+
+#: providers.py:240
+msgid "IPTV bouquet position"
+msgstr "Позиция IPTV букетов в списке"
+
+#: providers.py:240
+msgid "Select where to place IPTV bouquets"
+msgstr "Выберете где разместить IPTV букеты"
+
+#: providers.py:241
+msgid "Create all channels bouquet:"
+msgstr "Создать All Channels букет"
+
+#: providers.py:241
+msgid "Create a bouquet containing all channels"
+msgstr "Создать букет содержащий все каналы из всех групп"
+
+#: providers.py:243
+msgid "All IPTV type:"
+msgstr ""
+
+#: providers.py:243
+msgid ""
+"Normally should be left disabled. Setting to enabled may allow recording on "
+"some boxes. If you playback issues (e.g. stuttering on channels) set back to "
+"disabled"
+msgstr ""
+"Обычно должно быть выключено. Включение может инициировать запись на"
+"некороых ресиверах. Если у Вас проблемы с вопроизведением -"
+"выключите"
+
+#: providers.py:244
+msgid "TV Stream Type:"
+msgstr ""
+
+#: providers.py:244
+msgid "Stream type for TV services"
+msgstr ""
+
+#: providers.py:245
+msgid "VOD Stream Type:"
+msgstr ""
+
+#: providers.py:245
+msgid "Stream type for VOD services"
+msgstr ""
+
+#: providers.py:246
+msgid "Override service refs"
+msgstr ""
+
+#: providers.py:246
+msgid ""
+"Should be left disabled unless you need to use the override.xml to override "
+"service refs (e.g. for DVB to IPTV EPG mapping)"
+msgstr ""
+"Должен быть отключен если вы не используете override.xml для переопределения "
+"service refs (для DVB - IPTV EPG переопределения и т.д.)"
+
+#: providers.py:247
+msgid "Check providers bouquet"
+msgstr "Проверить букеты провайдера"
+
+#: providers.py:247
+msgid "Enable this option to check and use providers custom service refs"
+msgstr "Включите эту опцию для проверки и использования пользовательских service refs провайдеров"
+
+#: providers.py:269 providers.py:323
+#, python-format
+msgid "Confirm deletion of provider: %s"
+msgstr "Подтвердите удаление провайдера: %s"
