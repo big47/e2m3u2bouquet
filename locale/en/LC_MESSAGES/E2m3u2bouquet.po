@@ -337,6 +337,10 @@ msgstr ""
 msgid "Enable this option to check and use providers custom service refs"
 msgstr ""
 
+#: providers.py:263
+msgid "Please enter"                                                                                                                                         
+msgstr ""
+
 #: providers.py:272 providers.py:326
 #, python-format
 msgid "Confirm deletion of provider: %s"

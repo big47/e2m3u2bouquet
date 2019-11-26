@@ -50,9 +50,9 @@ except ImportError:
     pass
 
 __all__ = []
-__version__ = '0.9.7.2'
+__version__ = '0.9.8'
 __date__ = '2017-06-04'
-__updated__ = '2019-11-18'
+__updated__ = '2019-11-26'
 
 DEBUG = 0
 TESTRUN = 0
@@ -668,7 +668,7 @@ class Provider(object):
 
     def _extract_user_details_from_url(self):
         """Extract username & password from m3u_url
-           http://user:pass@NetLoc:80/path;parameters?query=argument#fragment
+           http://user:pass@NetLoc:port/path;parameters?query=argument#fragment
         """
         if self.config.m3u_url:
             parsed = urlparse(self.config.m3u_url)
@@ -916,6 +916,12 @@ class Provider(object):
 
                 for x in self._dictchannels[cat]:
                     cat_id = self._get_category_id(cat)
+#	SID:NS:TSID:ONID:STYPE:UNUSED(channelnumber in enigma1)
+#	X   X  X    X    D     D
+
+#	REFTYPE:FLAGS:STYPE:SID:TSID:ONID:NS:PARENT_SID:PARENT_TSID:UNUSED
+#	D       D     X     X   X    X    X  X          X           X
+
 #                                  "SID:TID:ONID:Namespace"
 #                                  {:04x}:{:04x}:{:04x}:{:08x}
                     service_ref = '{:04x}:{}:{}:{}'.format(num, cat_id[:4], cat_id[4:], NAMESPACE)

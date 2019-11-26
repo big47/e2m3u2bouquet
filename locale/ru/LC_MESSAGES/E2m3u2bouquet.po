@@ -349,6 +349,10 @@ msgstr "Проверить букеты провайдера"
 msgid "Enable this option to check and use providers custom service refs"
 msgstr "Включите эту опцию для проверки и использования пользовательских service refs провайдеров"
 
+#: providers.py:263
+msgid "Please enter"                                                                                                                                         
+msgstr "Пожалуйста введите"
+
 #: providers.py:269 providers.py:323
 #, python-format
 msgid "Confirm deletion of provider: %s"

@@ -12,6 +12,7 @@ from Components.config import config, ConfigEnableDisable, ConfigSubsection, \
                          ConfigSelectionNumber
 from Screens.MessageBox import MessageBox
 from Screens.Screen import Screen
+from Screens.VirtualKeyBoard import VirtualKeyBoard
 from Components.config import config, getConfigListEntry
 from Components.Label import Label
 from Components.ConfigList import ConfigListScreen
@@ -59,7 +60,6 @@ class E2m3u2b_Providers(Screen):
                                     }, -2)
         self['key_red'] = Button(_("Cancel"))
         self['key_green'] = Button(_("Add"))
-
         self['pleasewait'] = Label()
         self['no_providers'] = Label()
         self['no_providers'].setText('No providers please add one (use green button) or create config.xml file')
@@ -153,7 +153,7 @@ class E2m3u2b_Providers_Config(ConfigListScreen, Screen):
         self.activityTimer = eTimer()
         self.activityTimer.timeout.get().append(self.prepare)
 
-        self['actions'] = ActionMap(['SetupActions', 'ColorActions', 'VirtualKeyboardActions', 'MenuActions'],
+        self['actions'] = ActionMap(['SetupActions', 'ColorActions', 'MenuActions'],
                                     {
                                         'ok': self.keySave,
                                         'cancel': self.keyCancel,
@@ -166,6 +166,7 @@ class E2m3u2b_Providers_Config(ConfigListScreen, Screen):
         self['key_red'] = Button(_("Cancel"))
         self['key_green'] = Button(_("Save"))
         self['key_yellow'] = Button(_("Delete"))
+
         self['description'] = Label()
         self['pleasewait'] = Label()
 
@@ -232,10 +233,10 @@ class E2m3u2b_Providers_Config(ConfigListScreen, Screen):
             self.list.append(getConfigListEntry("%s:" % _("Enabled"), self.provider_enabled, _("Enable provider %s") % self.provider.name))
             if self.provider_enabled.value:
                 self.list.append(getConfigListEntry("%s:" % _("Setup mode"), self.provider_settings_level, _("Choose level of settings. Expert shows all options")))
-                self.list.append(getConfigListEntry("M3U url:", self.provider_m3u_url, _("Providers M3U url. USERNAME & PASSWORD will be replaced by values below")))
+                self.list.append(getConfigListEntry("%s:" % _("M3U url"), self.provider_m3u_url, _("Providers M3U url. USERNAME & PASSWORD will be replaced by values below")))
                 self.list.append(getConfigListEntry(_("Used EPG:"), self.provider_used_epg, _("If selected default, the plugin will use a predefined EPG by r.rusya")))
                 if self.provider_used_epg.value == 'custom':
-                    self.list.append(getConfigListEntry("EPG url:", self.provider_epg_url, _("Providers EPG url. USERNAME & PASSWORD will be replaced by values below")))
+                    self.list.append(getConfigListEntry("%s:" % _("EPG url"), self.provider_epg_url, _("Providers EPG url. USERNAME & PASSWORD will be replaced by values below")))
                 self.list.append(getConfigListEntry("%s:" % _("Username"), self.provider_username, _("If set will replace USERNAME placeholder in urls")))
                 self.list.append(getConfigListEntry("%s:" % _("Password"), self.provider_password, _("If set will replace PASSWORD placeholder in urls")))
                 self.list.append(getConfigListEntry("%s:" % _("Multi VOD"), self.provider_multi_vod, _("Enable to create multiple VOD bouquets rather than single VOD bouquet")))
@@ -252,8 +253,14 @@ class E2m3u2b_Providers_Config(ConfigListScreen, Screen):
         self['config'].list = self.list
         self['config'].setList(self.list)
 
+    def renameEntryCallback(self, answer):
+        if answer:
+            self.item[1].value = answer
+
     def changedEntry(self):
         self.item = self['config'].getCurrent()
+        if self.item[1] in (self.provider_name, self.provider_m3u_url, self.provider_epg_url, self.provider_username, self.provider_password):
+            self.session.openWithCallback(self.renameEntryCallback, VirtualKeyBoard, title="%s %s" % (_("Please enter"), self.item[0]), text=self.item[1].value)
         for x in self.onChangedEntry:
             # for summary desc
             x()

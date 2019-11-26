@@ -1,4 +1,4 @@
-# SOME DESCRIPTIVE TITLE.
+# SOME DESCRIPTIVE TITLE
 # Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
 # This file is distributed under the same license as the PACKAGE package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
@@ -335,6 +335,10 @@ msgstr ""
 
 #: providers.py:250
 msgid "Enable this option to check and use providers custom service refs"
+msgstr ""
+
+#: providers.py:263
+msgid "Please enter"
 msgstr ""
 
 #: providers.py:272 providers.py:326
