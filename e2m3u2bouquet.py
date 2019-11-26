@@ -50,7 +50,7 @@ except ImportError:
     pass
 
 __all__ = []
-__version__ = '0.9.8'
+__version__ = '0.9.8.1'
 __date__ = '2017-06-04'
 __updated__ = '2019-11-26'
 

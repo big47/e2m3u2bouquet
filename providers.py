@@ -255,18 +255,19 @@ class E2m3u2b_Providers_Config(ConfigListScreen, Screen):
 
     def renameEntryCallback(self, answer):
         if answer:
-            self.item[1].value = answer
+            self.item[1].value = answer.strip()
+            self.create_setup()
 
     def changedEntry(self):
         self.item = self['config'].getCurrent()
-        if self.item[1] in (self.provider_name, self.provider_m3u_url, self.provider_epg_url, self.provider_username, self.provider_password):
-            self.session.openWithCallback(self.renameEntryCallback, VirtualKeyBoard, title="%s %s" % (_("Please enter"), self.item[0]), text=self.item[1].value)
         for x in self.onChangedEntry:
             # for summary desc
             x()
         try:
             # if an option is changed that has additional config options show or hide these options
-            if isinstance(self['config'].getCurrent()[1], ConfigYesNo) or isinstance(self['config'].getCurrent()[1], ConfigSelection):
+            if self.item[1] in (self.provider_name, self.provider_m3u_url, self.provider_epg_url, self.provider_username, self.provider_password):
+                self.session.openWithCallback(self.renameEntryCallback, VirtualKeyBoard, title="%s %s" % (_("Please enter"), self.item[0]), text=self.item[1].value)
+            if isinstance(self.item[1], ConfigYesNo) or isinstance(self.item[1], ConfigSelection):
                 self.create_setup()
         except:
             pass
