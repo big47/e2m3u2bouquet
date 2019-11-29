@@ -50,7 +50,7 @@ except ImportError:
     pass
 
 __all__ = []
-__version__ = '0.9.8.1'
+__version__ = '0.9.8.3'
 __date__ = '2017-06-04'
 __updated__ = '2019-11-26'
 
@@ -354,7 +354,7 @@ class Provider(object):
                 service_dict['stream-type'] = str(self.config.streamtype_tv)
         else:
             service_dict['category_type'] = 'vod'
-            service_dict['group-title'] = u"VOD - {}".format(service_dict['group-title'])
+            service_dict['group-title'] = 'VOD - {}'.format(service_dict['group-title'])
             service_dict['stream-type'] = '4097' if not self.config.streamtype_vod else str(self.config.streamtype_vod)
 
     def _parse_map_bouquet_xml(self):
@@ -1279,7 +1279,7 @@ class Provider(object):
                             bouquet_name = self._category_options['VOD']['nameOverride'].decode('utf-8')
 
                         channel_num = 0
-                        f.write(u"#NAME {}\n".format(bouquet_name))
+                        f.write('#NAME {}\n'.format(bouquet_name))
                         if not channel_number_start_offset_output and not self.config.all_bouquet:
                             # write place holder services (for channel numbering)
                             for i in xrange(100):
