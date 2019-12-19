@@ -5,7 +5,7 @@ import os, sys
 import log
 #import providersmanager as PM
 import e2m3u2bouquet
-from enigma import eTimer
+from enigma import eTimer, getDesktop
 from Components.config import config, ConfigEnableDisable, ConfigSubsection, \
 			 ConfigYesNo, ConfigClock, getConfigListEntry, ConfigText, \
 			 ConfigSelection, ConfigNumber, ConfigSubDict, NoSave, ConfigPassword, \
@@ -32,14 +32,17 @@ except:
 
 ENIGMAPATH = '/etc/enigma2/'
 CFGPATH = os.path.join(ENIGMAPATH, 'e2m3u2bouquet/')
+ScreenWidth = getDesktop(0).size().width()
+ScreenWidth = 'HD' if ScreenWidth and ScreenWidth >= 1280 else 'SD'
 
 class E2m3u2b_Providers(Screen):
 
     def __init__(self, session):
-        self.session = session
-        with open('{}/skins/{}'.format(os.path.dirname(sys.modules[__name__].__file__), 'providers.xml'), 'r') as f:
+
+        with open('{}/skins/{}/{}'.format(os.path.dirname(sys.modules[__name__].__file__), ScreenWidth, 'providers.xml'), 'r') as f:
             self.skin = f.read()
 
+        self.session = session
         Screen.__init__(self, session)
         Screen.setTitle(self, "IPTV Bouquet Maker - %s" % _("Providers"))
         self.skinName = ["E2m3u2b_Providers", "AutoBouquetsMaker_HideSections"]
@@ -50,7 +53,7 @@ class E2m3u2b_Providers(Screen):
         self.activityTimer = eTimer()
         self.activityTimer.timeout.get().append(self.prepare)
 
-        self['actions'] = ActionMap(["ColorActions", "SetupActions", "MenuActions"],
+        self['actions'] = ActionMap(['ColorActions', 'SetupActions', 'MenuActions'],
                                     {
                                         'ok': self.openSelected,
                                         'cancel': self.keyCancel,
@@ -114,11 +117,7 @@ class E2m3u2b_Providers(Screen):
         return (pixmap, str(provider.name), '')
 
     def refresh(self):
-        self.drawList = []
-
-        for key, provider in self.e2m3u2b_config.providers.iteritems():
-            self.drawList.append(self.buildListEntry(provider))
-        self['list'].setList(self.drawList)
+        self['list'].setList([self.buildListEntry(provider) for key, provider in self.e2m3u2b_config.providers.iteritems()])
 
         if not self.e2m3u2b_config.providers:
             self['no_providers'].show()
@@ -136,10 +135,10 @@ class E2m3u2b_Providers(Screen):
 class E2m3u2b_Providers_Config(ConfigListScreen, Screen):
 
     def __init__(self, session, providers_config, provider):
-        self.session = session
-        with open('{}/skins/{}'.format(os.path.dirname(sys.modules[__name__].__file__), 'providerconfig.xml'), 'r') as f:
+        with open('{}/skins/{}/{}'.format(os.path.dirname(sys.modules[__name__].__file__), ScreenWidth, 'providerconfig.xml'), 'r') as f:
             self.skin = f.read()
 
+        self.session = session
         Screen.__init__(self, session)
         self.e2m3u2b_config = providers_config
         self.provider = provider
@@ -160,12 +159,14 @@ class E2m3u2b_Providers_Config(ConfigListScreen, Screen):
                                         'red': self.keyCancel,
                                         'green': self.keySave,
                                         'yellow': self.key_delete,
+                                        'blue': self.openKeyboard,
                                         'menu': self.keyCancel,
                                     }, -2)
 
         self['key_red'] = Button(_("Cancel"))
         self['key_green'] = Button(_("Save"))
         self['key_yellow'] = Button(_("Delete"))
+        self['key_blue'] = Button(_("Keyboard"))
 
         self['description'] = Label()
         self['pleasewait'] = Label()
@@ -185,12 +186,12 @@ class E2m3u2b_Providers_Config(ConfigListScreen, Screen):
         self.provider_enabled.value = self.provider.enabled
         self.provider_name = ConfigText(default='', fixed_size=False, visible_width=20)
         self.provider_name.value = self.provider.name if self.provider.name != 'New' else ''
-        self.provider_settings_level = ConfigSelection(default='simple', choices=['simple', 'expert'])
+        self.provider_settings_level = ConfigSelection(default=_('simple'), choices=[_('simple'), _('expert')])
         self.provider_settings_level.value = self.provider.settings_level
         self.provider_m3u_url = ConfigText(default='', fixed_size=False, visible_width=20)
         self.provider_m3u_url.value = self.provider.m3u_url
-        self.provider_used_epg = ConfigSelection(default='custom', choices=['default', 'custom'])
-        if self.provider_used_epg.value == 'default':
+        self.provider_used_epg = ConfigSelection(default=_('custom'), choices=[_('default'), _('custom')])
+        if self.provider_used_epg.value == _('default'):
             self.provider_epg_url = e2m3u2bouquet.DEFAULTEPG
         self.provider_epg_url = ConfigText(default='', fixed_size=False, visible_width=20)
         self.provider_epg_url.value = self.provider.epg_url
@@ -202,9 +203,9 @@ class E2m3u2b_Providers_Config(ConfigListScreen, Screen):
         self.provider_multi_vod.value = self.provider.multi_vod
         self.provider_picons = ConfigYesNo(default=False)
         self.provider_picons.value = self.provider.picons
-        self.provider_bouquet_pos = ConfigSelection(default='bottom', choices=['bottom', 'top'])
+        self.provider_bouquet_pos = ConfigSelection(default=_('bottom'), choices=[_('bottom'), _('top')])
         if self.provider.bouquet_top:
-            self.provider_bouquet_pos.value = 'top'
+            self.provider_bouquet_pos.value = _('top')
         self.provider_all_bouquet = ConfigYesNo(default=True)
         self.provider_all_bouquet.value = self.provider.all_bouquet
         self.provider_iptv_types = ConfigEnableDisable(default=False)
@@ -235,7 +236,7 @@ class E2m3u2b_Providers_Config(ConfigListScreen, Screen):
                 self.list.append(getConfigListEntry("%s:" % _("Setup mode"), self.provider_settings_level, _("Choose level of settings. Expert shows all options")))
                 self.list.append(getConfigListEntry("%s:" % _("M3U url"), self.provider_m3u_url, _("Providers M3U url. USERNAME & PASSWORD will be replaced by values below")))
                 self.list.append(getConfigListEntry(_("Used EPG:"), self.provider_used_epg, _("If selected default, the plugin will use a predefined EPG by r.rusya")))
-                if self.provider_used_epg.value == 'custom':
+                if self.provider_used_epg.value == _('custom'):
                     self.list.append(getConfigListEntry("%s:" % _("EPG url"), self.provider_epg_url, _("Providers EPG url. USERNAME & PASSWORD will be replaced by values below")))
                 self.list.append(getConfigListEntry("%s:" % _("Username"), self.provider_username, _("If set will replace USERNAME placeholder in urls")))
                 self.list.append(getConfigListEntry("%s:" % _("Password"), self.provider_password, _("If set will replace PASSWORD placeholder in urls")))
@@ -243,7 +244,7 @@ class E2m3u2b_Providers_Config(ConfigListScreen, Screen):
                 self.list.append(getConfigListEntry("%s:" % _("Picons"), self.provider_picons, _("Automatically download Picons")))
                 self.list.append(getConfigListEntry(_("IPTV bouquet position"), self.provider_bouquet_pos, _("Select where to place IPTV bouquets")))
                 self.list.append(getConfigListEntry(_("Create all channels bouquet:"), self.provider_all_bouquet, _("Create a bouquet containing all channels")))
-                if self.provider_settings_level.value == 'expert':
+                if self.provider_settings_level.value == _('expert'):
                     self.list.append(getConfigListEntry(_("All IPTV type:"), self.provider_iptv_types, _("Normally should be left disabled. Setting to enabled may allow recording on some boxes. If you playback issues (e.g. stuttering on channels) set back to disabled")))
                     self.list.append(getConfigListEntry(_("TV Stream Type:"), self.provider_streamtype_tv, _("Stream type for TV services")))
                     self.list.append(getConfigListEntry(_("VOD Stream Type:"), self.provider_streamtype_vod, _("Stream type for VOD services")))
@@ -253,27 +254,26 @@ class E2m3u2b_Providers_Config(ConfigListScreen, Screen):
         self['config'].list = self.list
         self['config'].setList(self.list)
 
-    def renameEntryCallback(self, answer):
-        config = self['config'].getCurrent()[1]
-	config.help_window.instance.show()
-        if answer:
-            self.item[1].value = answer.strip()
-            self.create_setup()
+    def keyBoardCallback(self, answer = None):
+        if answer is not None and len(answer):
+            self['config'].getCurrent()[1].setValue(answer.strip())
+            self['config'].invalidate(self['config'].getCurrent())
 
     def changedEntry(self):
-        self.item = self['config'].getCurrent()
-        for x in self.onChangedEntry:
-            # for summary desc
-            x()
+        current = self['config'].getCurrent()
+        map(lambda x: x(), self.onChangedEntry)
         try:
             # if an option is changed that has additional config options show or hide these options
-            if self.item[1] in (self.provider_name, self.provider_m3u_url, self.provider_epg_url, self.provider_username, self.provider_password):
-                self.item[1].help_window.instance.hide()
-                self.session.openWithCallback(self.renameEntryCallback, VirtualKeyBoard, title="%s %s" % (_("Please enter"), self.item[0]), text=self.item[1].value)
-            if isinstance(self.item[1], ConfigYesNo) or isinstance(self.item[1], ConfigSelection):
+            if not (isinstance(current[1], ConfigYesNo) or isinstance(current[1], ConfigSelection)):
+                self.openKeyboard()
+            else:
                 self.create_setup()
         except:
             pass
+
+    def openKeyboard(self):
+        if isinstance(self['config'].getCurrent()[1], ConfigText) or isinstance(self['config'].getCurrent()[1], ConfigPassword):
+    	    self.session.openWithCallback(self.keyBoardCallback, VirtualKeyBoard, title="%s %s" % (_("Please enter"), self['config'].getCurrent()[0]), text=self['config'].getCurrent()[1].value)
 
     def keySave(self):
         previous_name = self.provider.name
@@ -285,7 +285,7 @@ class E2m3u2b_Providers_Config(ConfigListScreen, Screen):
         self.provider.name = self.provider_name.value
         self.provider.settings_level = self.provider_settings_level.value
         self.provider.m3u_url = self.provider_m3u_url.value
-        if self.provider_used_epg.value == 'default':
+        if self.provider_used_epg.value == _('default'):
            self.provider.epg_url = e2m3u2bouquet.DEFAULTEPG
         else:
            self.provider.epg_url = self.provider_epg_url.value
@@ -293,7 +293,7 @@ class E2m3u2b_Providers_Config(ConfigListScreen, Screen):
         self.provider.password = self.provider_password.value
         self.provider.multi_vod = self.provider_multi_vod.value
         self.provider.picons = self.provider_picons.value
-        if self.provider_bouquet_pos.value == 'top':
+        if self.provider_bouquet_pos.value == _('top'):
             self.provider.bouquet_top = True
         else:
             self.provider.bouquet_top = False
@@ -320,8 +320,7 @@ class E2m3u2b_Providers_Config(ConfigListScreen, Screen):
     def cancelConfirm(self, result):
         if not result:
             return
-        for x in self['config'].list:
-            x[1].cancel()
+        map(lambda x: x[1].cancel(), self['config'].list)
         self.close()
 
     def keyCancel(self):

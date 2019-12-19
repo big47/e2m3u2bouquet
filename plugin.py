@@ -16,9 +16,10 @@ from Components.config import config, ConfigEnableDisable, ConfigSubsection, \
             ConfigYesNo, ConfigClock, getConfigListEntry, ConfigText, \
             ConfigSelection, ConfigNumber, ConfigSubDict, NoSave, ConfigPassword, \
             ConfigSelectionNumber
+from Components.PluginComponent import plugins
+from Components.Harddisk import harddiskmanager
 from Screens.MessageBox import MessageBox
 from Plugins.Plugin import PluginDescriptor
-from Components.PluginComponent import plugins
 
 from twisted.internet import reactor, threads
 import twisted.python.runtime
@@ -40,6 +41,9 @@ try:
     e2m3u2bouquet.web_server()
 except: pass
 
+# Mounted devices for picon download
+choices = ['{}picon/'.format(part.mountpoint) for part in harddiskmanager.getMountedPartitions()]
+choices.append(e2m3u2bouquet.PICONSPATH)
 # Set default configuration
 config.plugins.e2m3u2b = ConfigSubsection()
 config.plugins.e2m3u2b.cfglevel = ConfigText(default='')
@@ -49,19 +53,11 @@ config.plugins.e2m3u2b.scheduletype = ConfigSelection(default='interval', choice
 config.plugins.e2m3u2b.updateinterval = ConfigSelectionNumber(default=6, min=2, max=48, stepwidth=1)
 config.plugins.e2m3u2b.schedulefixedtime = ConfigClock(default=0)
 config.plugins.e2m3u2b.autobouquetupdateatboot = ConfigYesNo(default=False)
-config.plugins.e2m3u2b.iconpath = ConfigSelection(default='/usr/share/enigma2/picon/',
-                                                  choices=['/usr/share/enigma2/picon/',
-                                                           '/media/usb/picon/',
-                                                           '/media/hdd/picon/',
-                                                           '/media/cf/picon/',
-                                                           '/media/mmc/picon/',
-                                                           '/picon/'
-                                                           ])
+config.plugins.e2m3u2b.iconpath = ConfigSelection(default=e2m3u2bouquet.PICONSPATH, choices=choices)
 config.plugins.e2m3u2b.last_update = ConfigText()
 config.plugins.e2m3u2b.extensions = ConfigYesNo(default=False)
 config.plugins.e2m3u2b.mainmenu = ConfigYesNo(default=False)
 config.plugins.e2m3u2b.do_epgimport = ConfigYesNo(default=True)
-
 # legacy config
 config.plugins.e2m3u2b.providername = ConfigText(default='')
 config.plugins.e2m3u2b.username = ConfigText(default='')
@@ -75,12 +71,10 @@ config.plugins.e2m3u2b.srefoverride = ConfigText(default='')
 config.plugins.e2m3u2b.bouquetdownload = ConfigText(default='')
 config.plugins.e2m3u2b.last_provider_update = ConfigText(default='')
 
-
 class AppUrlOpener(urllib.FancyURLopener):
     """Set user agent for downloads
     """
     version = 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Safari/537.36'
-
 
 class AutoStartTimer:
     def __init__(self, session):

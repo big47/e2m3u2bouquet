@@ -205,6 +205,29 @@ msgstr "Провайдер"
 msgid "Delete"
 msgstr "Видалити"
 
+#: providers.py:188
+msgid "simple"                                                                                                                                               
+msgstr "простий"
+                                                                                                                                                    
+#: providers.py:188 providers.py:246                                                                                                                         
+msgid "expert"                                                                                                                                               
+msgstr "експертний"
+                                                                                                                                                    
+#: providers.py:192 providers.py:238                                                                                                                         
+msgid "custom"                                                                                                                                               
+msgstr "задане"                                                                                                                                                    
+
+#: providers.py:192 providers.py:193                                                                                                                         
+msgid "default"                                                                                                                                              
+msgstr "за замовчуванням"
+                                                                                                                                                    
+#: providers.py:205                                                                                                                                          
+msgid "bottom"                                                                                                                                               
+msgstr "знизу"
+#: providers.py:205 providers.py:207
+msgid "top"
+msgstr "зверху"
+
 #: providers.py:226
 msgid "Name"
 msgstr "Им'я"

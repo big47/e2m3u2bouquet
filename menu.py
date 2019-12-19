@@ -11,7 +11,7 @@ import plugin as E2m3u2b_Plugin
 from about import E2m3u2b_About
 from providers import E2m3u2b_Providers
 
-from enigma import eTimer
+from enigma import eTimer, getDesktop
 from Components.config import config, ConfigEnableDisable, ConfigSubsection, \
             ConfigYesNo, ConfigClock, getConfigListEntry, ConfigText, \
             ConfigSelection, ConfigNumber, ConfigSubDict, NoSave, ConfigPassword, \
@@ -42,11 +42,15 @@ try:
 except ImportError:
     EPGImport = None
 
+ScreenWidth = getDesktop(0).size().width()
+ScreenWidth = 'HD' if ScreenWidth and ScreenWidth >= 1280 else 'SD'
+
 class E2m3u2b_Menu(Screen):
 
     def __init__(self, session):
-        with open('{}/skins/{}'.format(os.path.dirname(sys.modules[__name__].__file__), 'mainmenu.xml'), 'r') as f:
+        with open('{}/skins/{}/{}'.format(os.path.dirname(sys.modules[__name__].__file__), ScreenWidth, 'mainmenu.xml'), 'r') as f:
             self.skin = f.read()
+
         Screen.__init__(self, session)
         Screen.setTitle(self, "IPTV Bouquet Maker - Pepsik edition")
         self.skinName = ['E2m3u2b_Menu', 'AutoBouquetsMaker_Menu']
@@ -147,10 +151,11 @@ class E2m3u2b_Menu(Screen):
 class E2m3u2b_Config(ConfigListScreen, Screen):
 
     def __init__(self, session):
-        with open('{}/skins/{}'.format(os.path.dirname(sys.modules[__name__].__file__), 'mainconfig.xml'), 'r') as f:
+        with open('{}/skins/{}/{}'.format(os.path.dirname(sys.modules[__name__].__file__), ScreenWidth, 'mainconfig.xml'), 'r') as f:
             self.skin = f.read()
-        Screen.__init__(self, session)
+
         self.session = session
+        Screen.__init__(self, session)
         Screen.setTitle(self, 'IPTV Bouquet Maker - %s' % _("Configure"))
         self.skinName = ['E2m3u2b_Config', 'AutoBouquetsMaker_Setup']
 
@@ -197,13 +202,10 @@ class E2m3u2b_Config(ConfigListScreen, Screen):
 
     def changedEntry(self):
         self.item = self['config'].getCurrent()
-        for x in self.onChangedEntry:
-            # for summary desc
-            x()
-
+        map(lambda x: x(), self.onChangedEntry)
         try:
             # If an option is changed that has additional config options show or hide these options
-            if isinstance(self['config'].getCurrent()[1], ConfigYesNo) or isinstance(self['config'].getCurrent()[1], ConfigSelection):
+            if isinstance(self.item[1], ConfigYesNo) or isinstance(self.item[1], ConfigSelection):
                 self.createSetup()
         except:
             pass
@@ -217,13 +219,12 @@ class E2m3u2b_Config(ConfigListScreen, Screen):
 
     def reset_legacy_config(self):
         if config.plugins.e2m3u2b.cfglevel.value == '1':
-            cfg_list = [config.plugins.e2m3u2b.providername, config.plugins.e2m3u2b.username,
-                        config.plugins.e2m3u2b.password, config.plugins.e2m3u2b.iptvtypes,
-                        config.plugins.e2m3u2b.multivod, config.plugins.e2m3u2b.bouquetpos,
-                        config.plugins.e2m3u2b.allbouquet, config.plugins.e2m3u2b.picons,
-                        config.plugins.e2m3u2b.srefoverride, config.plugins.e2m3u2b.bouquetdownload,
-                        config.plugins.e2m3u2b.last_provider_update]
-            for x in cfg_list:
+            for x in [config.plugins.e2m3u2b.providername, config.plugins.e2m3u2b.username,
+                      config.plugins.e2m3u2b.password, config.plugins.e2m3u2b.iptvtypes,
+                      config.plugins.e2m3u2b.multivod, config.plugins.e2m3u2b.bouquetpos,
+                      config.plugins.e2m3u2b.allbouquet, config.plugins.e2m3u2b.picons,
+                      config.plugins.e2m3u2b.srefoverride, config.plugins.e2m3u2b.bouquetdownload,
+                      config.plugins.e2m3u2b.last_provider_update]:
                 x.value = ''
                 x.save()
 
@@ -231,8 +232,7 @@ class E2m3u2b_Config(ConfigListScreen, Screen):
     def cancelConfirm(self, result):
         if not result:
             return
-        for x in self['config'].list:
-            x[1].cancel()
+        map(lambda x: x[1].cancel(), self['config'].list)
         self.close()
 
     def keyCancel(self):
@@ -244,9 +244,10 @@ class E2m3u2b_Config(ConfigListScreen, Screen):
 class E2m3u2b_Status(Screen):
 
     def __init__(self, session):
-        self.session = session
-        with open('{}/skins/{}'.format(os.path.dirname(sys.modules[__name__].__file__), 'status.xml'), 'r') as f:
+        with open('{}/skins/{}/{}'.format(os.path.dirname(sys.modules[__name__].__file__), ScreenWidth, 'status.xml'), 'r') as f:
             self.skin = f.read()
+
+        self.session = session
         Screen.__init__(self, session)
         Screen.setTitle(self, 'IPTV Bouquet Maker - %s' % _("Status"))
         self.skinName = ['E2m3u2b_Status', 'AutoBouquetsMaker_About']
@@ -270,16 +271,14 @@ class E2m3u2b_Status(Screen):
 class E2m3u2b_Log(Screen):
 
     def __init__(self, session):
-        self.session = session
-        with open('{}/skins/{}'.format(os.path.dirname(sys.modules[__name__].__file__), 'log.xml'), 'r') as f:
+        with open('{}/skins/{}/{}'.format(os.path.dirname(sys.modules[__name__].__file__), ScreenWidth, 'log.xml'), 'r') as f:
             self.skin = f.read()
+
+        self.session = session
         Screen.__init__(self, session)
         Screen.setTitle(self, 'IPTV Bouquet Maker - Log')
         self.skinName = ['E2m3u2b_Log', 'AutoBouquetsMaker_Log']
 
-        self["key_red"] = Button(_("Close"))
-        self["key_green"] = Button(_("Save"))
-        self["key_blue"] = Button(_("Clear"))
         self["list"] = ScrollLabel(log.getvalue())
         self["actions"] = ActionMap(["DirectionActions", "OkCancelActions", "ColorActions", "MenuActions"],
                                     {
@@ -297,6 +296,10 @@ class E2m3u2b_Log(Screen):
                                         "menu": self.keyCancel,
                                     }, -2)
 
+        self["key_red"] = Button(_("Close"))
+        self["key_green"] = Button(_("Save"))
+        self["key_blue"] = Button(_("Clear"))
+
     def keyCancel(self):
         self.close(False)
 
@@ -313,9 +316,11 @@ class E2m3u2b_Log(Screen):
 class E2m3u2b_Update(Screen):
 
     def __init__(self, session, epgimport):
-        self.session = session
-        with open('{}/skins/{}'.format(os.path.dirname(sys.modules[__name__].__file__), 'update.xml'), 'r') as f:
+
+        with open('{}/skins/{}/{}'.format(os.path.dirname(sys.modules[__name__].__file__), ScreenWidth, 'update.xml'), 'r') as f:
             self.skin = f.read()
+
+        self.session = session
         Screen.__init__(self, session)
         Screen.setTitle(self, "IPTV Bouquet Maker - %s" % _("Create Bouquets"))
         self.skinName = ['E2m3u2b_Update', 'AutoBouquetsMaker_About']

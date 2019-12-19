@@ -207,6 +207,30 @@ msgstr "Provider"
 msgid "Delete"
 msgstr "Löschen"
 
+#: providers.py:188
+msgid "simple"                                                                                                                                               
+msgstr "einfach"
+                                                                                                                                                    
+#: providers.py:188 providers.py:246                                                                                                                         
+msgid "expert"                                                                                                                                               
+msgstr "experte"                                                                                                                                                    
+
+#: providers.py:192 providers.py:238                                                                                                                         
+msgid "custom"                                                                                                                                               
+msgstr "gegeben"
+
+#: providers.py:192 providers.py:193                                                                                                                         
+msgid "default"                                                                                                                                              
+msgstr "standard"
+
+#: providers.py:205                                                                                                                                          
+msgid "bottom"                                                                                                                                               
+msgstr "unterseite"
+
+#: providers.py:205 providers.py:207
+msgid "top"
+msgstr "oben"
+
 #: providers.py:229
 msgid "Name"
 msgstr "Name"

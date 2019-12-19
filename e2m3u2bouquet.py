@@ -50,9 +50,9 @@ except ImportError:
     pass
 
 __all__ = []
-__version__ = '0.9.8.3'
+__version__ = '0.9.8.5'
 __date__ = '2017-06-04'
-__updated__ = '2019-11-26'
+__updated__ = '2019-12-17'
 
 DEBUG = 0
 TESTRUN = 0
@@ -66,6 +66,7 @@ CROSSEPGPATH = '/usr/crossepg/providers/'
 PICONSPATH = '/usr/share/enigma2/picon/'
 
 PLACEHOLDER_SERVICE = '#SERVICE 1:832:d:0:0:0:0:0:0:0:'
+#PLACEHOLDER_SERVICE = '#SERVICE 1:519:d:0:0:0:0:0:0:0:'
 NAMESPACE = '1010101'
 PORT = 10001
 DEFAULTEPG = 'http://epg.openboxfan.com/xmltv-t-sd.xml.gz'

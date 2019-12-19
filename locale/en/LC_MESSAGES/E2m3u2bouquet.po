@@ -198,6 +198,30 @@ msgstr ""
 msgid "Delete"
 msgstr ""
 
+#: providers.py:188
+msgid "simple"                                                                                                                                               
+msgstr ""                                                                                                                                                    
+
+#: providers.py:188 providers.py:246                                                                                                                         
+msgid "expert"                                                                                                                                               
+msgstr ""                                                                                                                                                    
+
+#: providers.py:192 providers.py:238                                                                                                                         
+msgid "custom"                                                                                                                                               
+msgstr ""                                                                                                                                                    
+
+#: providers.py:192 providers.py:193                                                                                                                         
+msgid "default"                                                                                                                                              
+msgstr ""                                                                                                                                                    
+
+#: providers.py:205                                                                                                                                          
+msgid "bottom"                                                                                                                                               
+msgstr ""
+
+#: providers.py:205 providers.py:207
+msgid "top"
+msgstr ""
+
 #: providers.py:229
 msgid "Name"
 msgstr ""

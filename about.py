@@ -4,21 +4,24 @@ from . import _
 import os, sys
 import e2m3u2bouquet
 
+from enigma import getDesktop
 from Screens.Screen import Screen
 from Components.Label import Label
 from Components.ActionMap import ActionMap
 from Components.Pixmap import Pixmap
 from Components.Button import Button
 
+ScreenWidth = getDesktop(0).size().width()
+ScreenWidth = 'HD' if ScreenWidth and ScreenWidth >= 1280 else 'SD'
+
 class E2m3u2b_About(Screen):
 
     def __init__(self, session):
-        self.session = session
-        with open('{}/skins/{}'.format(os.path.dirname(sys.modules[__name__].__file__), 'about.xml'), 'r') as f:
+        with open('{}/skins/{}/{}'.format(os.path.dirname(sys.modules[__name__].__file__), ScreenWidth, 'about.xml'), 'r') as f:
             self.skin = f.read()
 
+        self.session = session
         Screen.__init__(self, session)
-        Screen.setTitle(self, _("About"))
         Screen.setTitle(self, "IPTV Bouquet Maker - %s" % _("About"))
         self.skinName = ['E2m3u2b_About', 'AutoBouquetsMaker_About']
 
@@ -42,10 +45,6 @@ class E2m3u2b_About(Screen):
         credit += "- Doug Mackay (main developer) \n"
         credit += "- Dave Sully aka suls (main developer) \n"
         credit += "- Dorik1972 aka Pepsik (journe:)yman) \n"
-        credit += "Resources: \n"
-        credit += "Tommy Burke's (@tommycahir) enigma2 guides \n"
-        credit += "Epg Importer plugin; Auto Bouquet Maker plugin \n"
-        credit += "Sandro Cavazzoni aka skaman and all CrossEPG developers"
         self["about"].setText(credit)
         self.onFirstExecBegin.append(self.setImages)
 
