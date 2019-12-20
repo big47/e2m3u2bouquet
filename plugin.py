@@ -30,20 +30,49 @@ try:
     import Plugins.Extensions.EPGImport.EPGImport as EPGImport
     import Plugins.Extensions.EPGImport.EPGConfig as EPGConfig
 except ImportError:
-    EPGImport = None
-    EPGConfig = None
+    EPGImport = EPGConfig = None
 
 # Global variable
 autoStartTimer = None
 _session = None
 providers_list = {}
+piconPaths = []
 try:
     e2m3u2bouquet.web_server()
 except: pass
 
-# Mounted devices for picon download
-choices = ['{}picon/'.format(part.mountpoint) for part in harddiskmanager.getMountedPartitions()]
-choices.append(e2m3u2bouquet.PICONSPATH)
+def initPiconPaths():
+    global piconPaths
+    piconPaths = []
+    piconPaths.append(e2m3u2bouquet.PICONSPATH)
+    map(lambda part: onMountpointAdded(part.mountpoint), harddiskmanager.getMountedPartitions())
+
+def onMountpointAdded(mountpoint):
+    global piconPaths
+    path = os.path.join(mountpoint, 'picon') + '/'
+    if path not in piconPaths:
+        piconPaths.append(path)
+
+def onMountpointRemoved(mountpoint):
+    global piconPaths
+    path = os.path.join(mountpoint, 'picon') + '/'
+    try:
+        piconPaths.remove(path)
+    except:
+        pass
+
+def onPartitionChange(why, part):
+    if why == 'add':
+        onMountpointAdded(part.mountpoint)
+    elif why == 'remove':
+        onMountpointRemoved(part.mountpoint)
+
+def getMounted():
+    global piconPaths
+    harddiskmanager.on_partition_list_change.append(onPartitionChange)
+    initPiconPaths()
+    return piconPaths
+
 # Set default configuration
 config.plugins.e2m3u2b = ConfigSubsection()
 config.plugins.e2m3u2b.cfglevel = ConfigText(default='')
@@ -53,7 +82,7 @@ config.plugins.e2m3u2b.scheduletype = ConfigSelection(default='interval', choice
 config.plugins.e2m3u2b.updateinterval = ConfigSelectionNumber(default=6, min=2, max=48, stepwidth=1)
 config.plugins.e2m3u2b.schedulefixedtime = ConfigClock(default=0)
 config.plugins.e2m3u2b.autobouquetupdateatboot = ConfigYesNo(default=False)
-config.plugins.e2m3u2b.iconpath = ConfigSelection(default=e2m3u2bouquet.PICONSPATH, choices=choices)
+config.plugins.e2m3u2b.iconpath = ConfigSelection(default=e2m3u2bouquet.PICONSPATH, choices=getMounted())
 config.plugins.e2m3u2b.last_update = ConfigText()
 config.plugins.e2m3u2b.extensions = ConfigYesNo(default=False)
 config.plugins.e2m3u2b.mainmenu = ConfigYesNo(default=False)
@@ -150,7 +179,6 @@ class AutoStartTimer:
 
     def get_status(self):
         print>> log, '[e2m3u2b] AutoStartTimer -> getStatus'
-
 
 def start_update(epgimport=None):
     """Run m3u channel update

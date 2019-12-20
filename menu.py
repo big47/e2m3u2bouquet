@@ -201,11 +201,11 @@ class E2m3u2b_Config(ConfigListScreen, Screen):
         self['config'].setList(self.list)
 
     def changedEntry(self):
-        self.item = self['config'].getCurrent()
+        current = self['config'].getCurrent()
         map(lambda x: x(), self.onChangedEntry)
         try:
             # If an option is changed that has additional config options show or hide these options
-            if isinstance(self.item[1], ConfigYesNo) or isinstance(self.item[1], ConfigSelection):
+            if isinstance(current[1], ConfigYesNo) or isinstance(current[1], ConfigSelection):
                 self.createSetup()
         except:
             pass
