@@ -1,4 +1,6 @@
-# SOME DESCRIPTIVE TITLE Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER This file is distributed under the same license as the PACKAGE package. 
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 #
 #, fuzzy
@@ -6,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-11-17 21:03+0200\n"
+"POT-Creation-Date: 2020-02-16 12:33+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -15,47 +17,69 @@ msgstr ""
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: about.py:21 about.py:22 menu.py:81
+#: about.py:23 menu.py:72
 msgid "About"
 msgstr ""
 
-#: about.py:33 menu.py:261 menu.py:280 menu.py:329
+#: about.py:37 menu.py:239 menu.py:275 menu.py:314
 msgid "Close"
 msgstr ""
 
-#: menu.py:65 menu.py:170
+#: about.py:42
+msgid "BoxType:"
+msgstr ""
+
+#: about.py:43
+msgid "Image:"
+msgstr ""
+
+#: about.py:46
+msgid "Multi provider IPTV bouquet maker for Enigma2\n"
+msgstr ""
+
+#: about.py:47
+msgid ""
+"This plugin is free and should not be resold\n"
+"\n"
+msgstr ""
+
+#: about.py:48
+msgid "Plugin authors:\n"
+msgstr ""
+
+#: menu.py:56
 msgid "Exit"
 msgstr ""
 
-#: menu.py:66 menu.py:171
-msgid "Select"
+#: menu.py:57
+msgid "Update"
 msgstr ""
 
-#: menu.py:75 menu.py:154
+#: menu.py:66 menu.py:147
 msgid "Configure"
 msgstr ""
 
-#: menu.py:76 providers.py:43
+#: menu.py:67 providers.py:35
 msgid "Providers"
 msgstr ""
 
-#: menu.py:77 menu.py:320
+#: menu.py:68 menu.py:303
 msgid "Create Bouquets"
 msgstr ""
 
-#: menu.py:78 menu.py:251
+#: menu.py:69 menu.py:228
 msgid "Status"
 msgstr ""
 
-#: menu.py:79
+#: menu.py:70
 msgid "Reset Bouquets"
 msgstr ""
 
-#: menu.py:80
+#: menu.py:71
 msgid "Show log"
 msgstr ""
 
-#: menu.py:127
+#: menu.py:106
 msgid ""
 "This will remove the IPTV Bouquets\n"
 "and Epg Importer configs\n"
@@ -63,307 +87,437 @@ msgid ""
 "Proceed?"
 msgstr ""
 
-#: menu.py:181
-msgid "Automatic bouquet update (schedule):"
+#: menu.py:163 providers.py:53 providers.py:149
+msgid "Cancel"
 msgstr ""
 
-#: menu.py:181
-msgid "Enable to update bouquets on a schedule"
-msgstr ""
-
-#: menu.py:183
-msgid "Schedule type:"
-msgstr ""
-
-#: menu.py:183
-msgid "Choose either a fixed time or an hourly update interval"
-msgstr ""
-
-#: menu.py:185
-msgid "Update interval (hours):"
-msgstr ""
-
-#: menu.py:185
-msgid "Set the number of hours between automatic bouquet updates"
-msgstr ""
-
-#: menu.py:187
-msgid "Time to start update:"
-msgstr ""
-
-#: menu.py:187
-msgid "Set the day of time to perform the bouquet update"
-msgstr ""
-
-#: menu.py:188
-msgid "Automatic bouquet update (when box starts):"
-msgstr ""
-
-#: menu.py:188
-msgid "Update bouquets at startup"
-msgstr ""
-
-#: menu.py:189
-msgid "Picon save path:"
-msgstr ""
-
-#: menu.py:189
-msgid "Select where to save picons (if download is enabled)"
-msgstr ""
-
-#: menu.py:190
-msgid "Attempt Epg Import"
-msgstr ""
-
-#: menu.py:190
-msgid "Automatically run Epg Import after bouquet update"
-msgstr ""
-
-#: menu.py:191
-msgid "Show in extensions:"
-msgstr ""
-
-#: menu.py:191
-msgid "Show in extensions menu"
-msgstr ""
-
-#: menu.py:192
-msgid "Show in main menu:"
-msgstr ""
-
-#: menu.py:192
-msgid "Show in main menu"
-msgstr ""
-
-#: menu.py:193
-msgid "Debug mode:"
-msgstr ""
-
-#: menu.py:193
-msgid "Enable debug mode. Do not enable unless requested"
-msgstr ""
-
-#: menu.py:240
-msgid "Really close without saving settings?"
-msgstr ""
-
-#: menu.py:281 providers.py:167
+#: menu.py:164 menu.py:276 providers.py:150
 msgid "Save"
 msgstr ""
 
-#: menu.py:282
+#: menu.py:174
+msgid "Automatic bouquet update (schedule):"
+msgstr ""
+
+#: menu.py:174
+msgid "Enable to update bouquets on a schedule"
+msgstr ""
+
+#: menu.py:176
+msgid "Schedule type:"
+msgstr ""
+
+#: menu.py:176
+msgid "Choose either a fixed time or an hourly update interval"
+msgstr ""
+
+#: menu.py:178
+msgid "Update interval (hours):"
+msgstr ""
+
+#: menu.py:178
+msgid "Set the number of hours between automatic bouquet updates"
+msgstr ""
+
+#: menu.py:180
+msgid "Time to start update:"
+msgstr ""
+
+#: menu.py:180
+msgid "Set the day of time to perform the bouquet update"
+msgstr ""
+
+#: menu.py:181
+msgid "Automatic bouquet update (when box starts):"
+msgstr ""
+
+#: menu.py:181
+msgid "Update bouquets at startup"
+msgstr ""
+
+#: menu.py:182
+msgid "Picon save path:"
+msgstr ""
+
+#: menu.py:182
+msgid "Select where to save picons (if download is enabled)"
+msgstr ""
+
+#: menu.py:183
+msgid "Attempt Epg Import:"
+msgstr ""
+
+#: menu.py:183
+msgid "Automatically run Epg Import after bouquet update"
+msgstr ""
+
+#: menu.py:184
+msgid "Show in extensions:"
+msgstr ""
+
+#: menu.py:184
+msgid "Show in extensions menu"
+msgstr ""
+
+#: menu.py:185
+msgid "Show in main menu:"
+msgstr ""
+
+#: menu.py:185
+msgid "Show in main menu"
+msgstr ""
+
+#: menu.py:186
+msgid "Debug mode:"
+msgstr ""
+
+#: menu.py:186
+msgid "Enable debug mode. Do not enable unless requested"
+msgstr ""
+
+#: menu.py:216
+msgid "Really close without saving settings?"
+msgstr ""
+
+#: menu.py:277
 msgid "Clear"
 msgstr ""
 
-#: menu.py:311
+#: menu.py:293
 msgid "Log file has been saved to the tmp directory"
 msgstr ""
 
-#: menu.py:361
+#: menu.py:345
 msgid "Update still in progress. Please wait."
 msgstr ""
 
-#: menu.py:366 plugin.py:352
+#: menu.py:350 plugin.py:341
 msgid ""
 "Update of channels will start.\n"
 "This may take a few minutes.\n"
 "Proceed?"
 msgstr ""
 
-#: menu.py:402
+#: menu.py:384
 msgid ""
 "EPG Import not found\n"
 "Please install the EPG Import plugin"
 msgstr ""
 
-#: plugin.py:390
+#: plugin.py:375
+msgid "IPTV Bouquet Maker - Pepsik edition"
+msgstr ""
+
+#: plugin.py:376
 msgid "Automated M3U playlists importer"
 msgstr ""
 
-#: providers.py:60 providers.py:166
-msgid "Cancel"
-msgstr ""
-
-#: providers.py:61
+#: providers.py:54
 msgid "Add"
 msgstr ""
 
-#: providers.py:146
+#: providers.py:57
+msgid ""
+"No providers please add one (use green button) or create config.xml file"
+msgstr ""
+
+#: providers.py:128
 msgid "Provider"
 msgstr ""
 
-#: providers.py:168 providers.py:230
+#: providers.py:151 providers.py:249
 msgid "Delete"
 msgstr ""
 
-#: providers.py:188
-msgid "simple"                                                                                                                                               
-msgstr ""                                                                                                                                                    
-
-#: providers.py:188 providers.py:246                                                                                                                         
-msgid "expert"                                                                                                                                               
-msgstr ""                                                                                                                                                    
-
-#: providers.py:192 providers.py:238                                                                                                                         
-msgid "custom"                                                                                                                                               
-msgstr ""                                                                                                                                                    
-
-#: providers.py:192 providers.py:193                                                                                                                         
-msgid "default"                                                                                                                                              
-msgstr ""                                                                                                                                                    
-
-#: providers.py:205                                                                                                                                          
-msgid "bottom"                                                                                                                                               
+#: providers.py:152
+msgid "Keyboard"
 msgstr ""
 
-#: providers.py:205 providers.py:207
+#: providers.py:175
+msgid "internal"
+msgstr ""
+
+#: providers.py:175
+msgid "Gstreamer"
+msgstr ""
+
+#: providers.py:177
+msgid "GstPlayer"
+msgstr ""
+
+#: providers.py:179
+msgid "ExtEplayer3"
+msgstr ""
+
+#: providers.py:186
+msgid "simple"
+msgstr ""
+
+#: providers.py:186 providers.py:265
+msgid "expert"
+msgstr ""
+
+#: providers.py:190 providers.py:259
+msgid "custom"
+msgstr ""
+
+#: providers.py:190 providers.py:191 providers.py:321
+msgid "default"
+msgstr ""
+
+#: providers.py:203
+msgid "bottom"
+msgstr ""
+
+#: providers.py:203 providers.py:205 providers.py:329
 msgid "top"
 msgstr ""
 
-#: providers.py:229
+#: providers.py:213
+msgid "no buffring"
+msgstr ""
+
+#: providers.py:213
+msgid "buffering enabled"
+msgstr ""
+
+#: providers.py:213
+msgid "http & buffering enabled"
+msgstr ""
+
+#: providers.py:216 providers.py:218 providers.py:220
+msgid "no"
+msgstr ""
+
+#: providers.py:216 providers.py:218 providers.py:220
+msgid "yes"
+msgstr ""
+
+#: providers.py:248
 msgid "Name"
 msgstr ""
 
-#: providers.py:229
+#: providers.py:248
 msgid "Provider name"
 msgstr ""
 
-#: providers.py:230
+#: providers.py:249
 #, python-format
 msgid "Delete provider %s"
 msgstr ""
 
-#: providers.py:232
+#: providers.py:251
 msgid "Enabled"
 msgstr ""
 
-#: providers.py:232
+#: providers.py:251
 #, python-format
 msgid "Enable provider %s"
 msgstr ""
 
-#: providers.py:234
+#: providers.py:253
 msgid "Setup mode"
 msgstr ""
 
-#: providers.py:234
+#: providers.py:253
 msgid "Choose level of settings. Expert shows all options"
 msgstr ""
 
-#: providers.py:235
-msgid "Providers M3U url. USERNAME & PASSWORD will be replaced by values below"
+#: providers.py:254
+msgid "M3U url"
 msgstr ""
 
-#: providers.py:236
-msgid "Used EPG:"
+#: providers.py:254
+msgid ""
+"Providers M3U url. If it contains USERNAME & PASSWORD templates,\n"
+"they will be replaced by values below"
 msgstr ""
 
-#: providers.py:236
-msgid "If selected default, the plugin will use a predefined EPG by r.rusya"
-msgstr ""
-
-#: providers.py:238
-msgid "Providers EPG url. USERNAME & PASSWORD will be replaced by values below"
-msgstr ""
-
-#: providers.py:239
+#: providers.py:256
 msgid "Username"
 msgstr ""
 
-#: providers.py:239
+#: providers.py:256
 msgid "If set will replace USERNAME placeholder in urls"
 msgstr ""
 
-#: providers.py:240
+#: providers.py:257
 msgid "Password"
 msgstr ""
 
-#: providers.py:240
+#: providers.py:257
 msgid "If set will replace PASSWORD placeholder in urls"
 msgstr ""
 
-#: providers.py:241
+#: providers.py:258
+msgid "Used EPG:"
+msgstr ""
+
+#: providers.py:258
+msgid "If selected default, the plugin will use a predefined EPG by r.rusya"
+msgstr ""
+
+#: providers.py:260
+msgid "EPG url"
+msgstr ""
+
+#: providers.py:260
+msgid ""
+"url link to EPG issued by provider. Leave blank if the m3u playlist has url-"
+"tvg or url-epg tags"
+msgstr ""
+
+#: providers.py:261
 msgid "Multi VOD"
 msgstr ""
 
-#: providers.py:241
+#: providers.py:261
 msgid "Enable to create multiple VOD bouquets rather than single VOD bouquet"
 msgstr ""
 
-#: providers.py:242
+#: providers.py:262
 msgid "Picons"
 msgstr ""
 
-#: providers.py:242
+#: providers.py:262
 msgid "Automatically download Picons"
 msgstr ""
 
-#: providers.py:243
-msgid "IPTV bouquet position"
-msgstr ""
-
-#: providers.py:243
-msgid "Select where to place IPTV bouquets"
-msgstr ""
-
-#: providers.py:244
-msgid "Create all channels bouquet:"
-msgstr ""
-
-#: providers.py:244
-msgid "Create a bouquet containing all channels"
-msgstr ""
-
-#: providers.py:246
-msgid "All IPTV type:"
-msgstr ""
-
-#: providers.py:246
-msgid ""
-"Normally should be left disabled. Setting to enabled may allow recording on "
-"some boxes. If you playback issues (e.g. stuttering on channels) set back to "
-"disabled"
-msgstr ""
-
-#: providers.py:247
-msgid "TV Stream Type:"
-msgstr ""
-
-#: providers.py:247
-msgid "Stream type for TV services"
-msgstr ""
-
-#: providers.py:248
-msgid "VOD Stream Type:"
-msgstr ""
-
-#: providers.py:248
-msgid "Stream type for VOD services"
-msgstr ""
-
-#: providers.py:249
-msgid "Override service refs"
-msgstr ""
-
-#: providers.py:249
-msgid ""
-"Should be left disabled unless you need to use the override.xml to override "
-"service refs (e.g. for DVB to IPTV EPG mapping)"
-msgstr ""
-
-#: providers.py:250
-msgid "Check providers bouquet"
-msgstr ""
-
-#: providers.py:250
-msgid "Enable this option to check and use providers custom service refs"
+#: providers.py:263
+msgid "IPTV bouquet position:"
 msgstr ""
 
 #: providers.py:263
+msgid "Select where to place IPTV bouquets"
+msgstr ""
+
+#: providers.py:264
+msgid "Create all channels bouquet:"
+msgstr ""
+
+#: providers.py:264
+msgid "Create a bouquet containing all channels"
+msgstr ""
+
+#: providers.py:266
+msgid "All IPTV type:"
+msgstr ""
+
+#: providers.py:266
+msgid ""
+"Normally should be left disabled. Setting to enabled may allow recording on "
+"some boxes.\n"
+"If you playback issues (e.g. stuttering on channels) set back to disabled"
+msgstr ""
+
+#: providers.py:267
+msgid "Live Player Type:"
+msgstr ""
+
+#: providers.py:267
+msgid "Stream player type for TV services"
+msgstr ""
+
+#: providers.py:270
+msgid "Stream Type:"
+msgstr ""
+
+#: providers.py:270
+msgid ""
+"Stream type: no buffering; buffering enabled; progressive download and "
+"buffering enabled"
+msgstr ""
+
+#: providers.py:273
+msgid "FLV2 to MPEG4 converter:"
+msgstr ""
+
+#: providers.py:273
+msgid "Convert flv2 stream to mpeg4"
+msgstr ""
+
+#: providers.py:274
+msgid "Use http progressive download:"
+msgstr ""
+
+#: providers.py:274
+msgid ""
+"It should be enabled if the provider gives a stream in http progressive "
+"download"
+msgstr ""
+
+#: providers.py:275
+msgid "Live TS:"
+msgstr ""
+
+#: providers.py:275
+msgid "Enable if broadcast is Live TS"
+msgstr ""
+
+#: providers.py:276
+msgid "Additional ffmpeg options:"
+msgstr ""
+
+#: providers.py:276
+msgid "Additional ffmpeg options for stream decoding"
+msgstr ""
+
+#: providers.py:279
+msgid "Ring Buffer Size:"
+msgstr ""
+
+#: providers.py:279
+msgid "Ring buffer size (Stack) in Kbytes"
+msgstr ""
+
+#: providers.py:280
+msgid "Data buffer size:"
+msgstr ""
+
+#: providers.py:280
+msgid "Data buffer size in Kbytes"
+msgstr ""
+
+#: providers.py:281
+msgid "Data buffer duration:"
+msgstr ""
+
+#: providers.py:281
+msgid "Data buffer duration in seconds"
+msgstr ""
+
+#: providers.py:283
+msgid "VOD Player Type:"
+msgstr ""
+
+#: providers.py:283
+msgid "Stream player type for VOD services"
+msgstr ""
+
+#: providers.py:284
+msgid "Override service refs:"
+msgstr ""
+
+#: providers.py:284
+msgid ""
+"Should be left disabled unless you need to use the override.xml to override "
+"service refs\n"
+"(e.g. for DVB to IPTV EPG mapping)"
+msgstr ""
+
+#: providers.py:285
+msgid "Check providers bouquet:"
+msgstr ""
+
+#: providers.py:285
+msgid "Enable this option to check and use providers custom service refs"
+msgstr ""
+
+#: providers.py:309
 msgid "Please enter"
 msgstr ""
 
-#: providers.py:272 providers.py:326
+#: providers.py:316 providers.py:381
 #, python-format
 msgid "Confirm deletion of provider: %s"
 msgstr ""

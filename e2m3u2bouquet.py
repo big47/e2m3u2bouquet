@@ -11,10 +11,16 @@ e2m3u2bouquet.e2m3u2bouquet -- Enigma2 IPTV m3u to bouquet parser
 
 from __future__ import print_function
 import sys, os, glob
+
 # Uppend the directory for custom modules at the front of the path.
-ROOT_DIR = os.path.dirname(os.path.realpath(__file__))
+try:
+    from Tools.Directories import resolveFilename, SCOPE_PLUGINS
+    ROOT_DIR = resolveFilename(SCOPE_PLUGINS, 'Extensions/E2m3u2bouquet')
+except:
+    ROOT_DIR = os.path.dirname(os.path.realpath(__file__))
 sys.path.insert(0, os.path.join(ROOT_DIR, 'modules'))
 for wheel in glob.glob(os.path.join(ROOT_DIR, 'modules', '*.whl')): sys.path.insert(0, wheel)
+
 
 import time
 import gzip
@@ -50,9 +56,9 @@ except ImportError:
     pass
 
 __all__ = []
-__version__ = '0.9.8.6'
+__version__ = '0.9.9.2'
 __date__ = '2017-06-04'
-__updated__ = '2019-12-20'
+__updated__ = '2020-02-16'
 
 DEBUG = 0
 TESTRUN = 0
@@ -187,11 +193,10 @@ def reload_bouquets():
         Provider._update_status('Reload bouquets', 'Reloading bouquets')
         print(Status.message)
         try:
-            r = eDVBDB.getInstance()
-            r.reloadServicelist()
-            r.reloadBouquets()
+            eDVBDB.getInstance().reloadServicelist()
+            eDVBDB.getInstance().reloadBouquets()
         except:
-            r = requests.get('http://127.0.0.1/web/servicelistreload?mode=2', timeout=5) # reload Servicelist & Bouquets
+            r = requests.get('http://{}/web/servicelistreload?mode=2'.format(get_selfip()), timeout=5) # reload Servicelist & Bouquets
             r.close()
         print('bouquets reloaded...')
 
@@ -277,6 +282,17 @@ class ProviderConfig(object):
         self.bouquet_download = False
         self.bouquet_top = False
         self.last_provider_update = 0
+        # 4097 Gstreamer options (0-no buffering, 1-buffering enabled, 3- http progressive download & buffering enabl )
+        self.gstreamer = '0'
+        # 5002 ExtEplayer3 options
+        self.flv2mpeg4 = '0'     # EXT3_FLV2MPEG4_CONVERTER
+        self.progressive = '0'   # EXT3_PLAYBACK_PROGRESSIVE
+        self.live_ts = '1'       # EXT3_PLAYBACK_LIVETS
+        self.ffmpeg_option = ''  # EXT3_FFMPEG_SETTING_STRING
+        # 5001 GstPlayer options
+        self.ring_buffer_maxsize = 32768   # GST_RING_BUFFER_MAXSIZE
+        self.buffer_size = 8192            # GST_BUFFER_SIZE
+        self.buffer_duration = 0           # GST_BUFFER_DURATION
 
 class Provider(object):
     def __init__(self, config):
@@ -284,7 +300,7 @@ class Provider(object):
         self._panel_bouquet = {}
         self._category_order = []
         self._category_options = {}
-        self._dictchannels =OrderedDict()
+        self._dictchannels = OrderedDict()
         self._xmltv_sources_list = {}
         self.config = config
 
@@ -368,7 +384,7 @@ class Provider(object):
             print(Status.message)
 
             try:
-                tree = ET.ElementTree(file=mapping_file)
+                tree = ET.parse(mapping_file).getroot()
                 for node in tree.findall(".//category"):
                     dictoption = {}
 
@@ -432,7 +448,7 @@ class Provider(object):
             print(Status.message)
 
             try:
-                tree = ET.ElementTree(file=mapping_file)
+                tree = ET.parse(mapping_file).getroot()
                 i = 0
                 for cat in self._dictchannels:
                     if self._category_options[cat].get('type', 'live') == 'live':
@@ -537,7 +553,17 @@ class Provider(object):
         """Add service to bouquet file
         """
         if not channel['stream-name'].startswith('placeholder_'):
-            f.write('#SERVICE {}:{}:{}\n'.format(channel['serviceRef'], quote(channel['stream-url'], safe="!#$%&'()*+,/;=?@[]~"), get_service_title(channel)))
+            service_ref = channel['serviceRef'].split(':')[0]
+            player_property = vars(self.config)
+            if service_ref == '1' or service_ref == '4097':
+                f.write('#SERVICE {}:{}:{}\n'.format(channel['serviceRef'], quote(channel['stream-url'], safe="!#$%&'()*+,/;=?@[]~"), get_service_title(channel)))
+            if service_ref == '5001':
+                url =  quote(channel['stream-url'] + '#sapp_ring_buffer_maxsize={ring_buffer_maxsize}&sapp_buffer_size={buffer_size}&sapp_buffer_duration={buffer_duration}'.format(**player_property), safe='!#$%&"()*+,/;=?@[]~')
+                f.write('#SERVICE {}:{}:{}\n'.format(channel['serviceRef'], url, get_service_title(channel)))
+            if service_ref == '5002':
+                url = quote(channel['stream-url'] + '#sapp_flv2mpeg4={flv2mpeg4}&sapp_progressive={progressive}&sapp_live_ts={live_ts}&sapp_ffmpeg_option="{ffmpeg_option}"'.format(**player_property), safe='!#$%&"()*+,/;=?@[]~')
+                f.write('#SERVICE {}:{}:{}\n'.format(channel['serviceRef'], url, get_service_title(channel)))
+
             f.write('#DESCRIPTION {}\n'.format(get_service_title(channel)))
         else:
             f.write('{}\n'.format(PLACEHOLDER_SERVICE))
@@ -645,8 +671,8 @@ class Provider(object):
         """Create EPG-importer source file
         """
 
-        indent = "  "
-        source_name = '{} - {}'.format(self.config.name, group) if group else self.config.name
+        indent = "\t"
+        source_name = '{} - {}'.format(slugify(self.config.name, lowercase=False), group) if group else slugify(self.config.name, lowercase=False)
         channels_filename = 'http://{}:{}/e2m3u2b_iptv_{}_channels.xml.gz'.format(get_selfip(), PORT, slugify(self.config.name))
 
         # write providers epg feed
@@ -654,7 +680,7 @@ class Provider(object):
 
         with open(source_filename, 'w+') as f:
             f.write('<sources>\n')
-            f.write('{}<sourcecat sourcecatname="IPTV Bouquet Maker/E2m3u2bouquet">\n'.format(indent))
+            f.write('{}<sourcecat sourcecatname="IPTV Bouquet Maker/{}">\n'.format(indent, xml_escape(source_name)))
             for k, v in sources.iteritems():
                 f.write('{}<source type="gen_xmltv" nocheck="1" channels="{}">\n'.format(2 * indent, channels_filename))
                 f.write('{}<description>{}</description>\n'.format(3 * indent, xml_escape(k)))
@@ -819,7 +845,7 @@ class Provider(object):
                 # Local M3U TAGs
                 tag_pattern = requests.utils.re.compile(r'.*?(tvg-id|tvg-name|tvg-logo|tvg-language|tvg-country|group-title)=[\'"](.*?)[\'"]')
                 def service_dict_template():
-                    dict = {}.fromkeys(['tvg-id', 'tvg-name', 'tvg-logo', 'tvg-language', 'tvg-country',
+                    dict = {}.fromkeys(['url-logo', 'url-tvg', 'url-epg', 'tvg-id', 'tvg-name', 'tvg-logo', 'tvg-language', 'tvg-country',
                                         'nameOverride', 'categoryOverride', 'serviceRef', ], '')
                     dict.update({'group-title': u'NoGroup', 'category_type': 'live', 'has_archive': False, 'enabled': True, 'serviceRefOverride': False, })
                     return dict
@@ -856,14 +882,13 @@ class Provider(object):
                                 if DEBUG:
                                     print("No TITLE info found for this service - skip")
                                 continue
-                        name = name.strip()
-                        service_dict.update({'stream-name': name})
+                        service_dict.update({'stream-name': name.strip()})
 
                         tvglogo = service_dict.get('tvg-logo')
                         if tvglogo != '' and not tvglogo.startswith(('http://', 'https://')) and urllogo.startswith(('http://', 'https://')):
                             service_dict.update({'tvg-logo':'{}{}'.format(logourl, tvglogo)})
                         if self.config.epg_url == DEFAULTEPG:
-                            service_dict.update({'tvg-id': self.get_tvgid(name)})
+                            service_dict.update({'tvg-id': self.get_tvgid(service_dict.get('stream-name'))})
 
                     elif line.startswith('#EXTGRP:') and service_dict.get('stream-name'):
                         if service_dict.get('group-title') == u'NoGroup':
@@ -917,14 +942,14 @@ class Provider(object):
 
                 for x in self._dictchannels[cat]:
                     cat_id = self._get_category_id(cat)
-#	SID:NS:TSID:ONID:STYPE:UNUSED(channelnumber in enigma1)
-#	X   X  X    X    D     D
+                    #	SID:NS:TSID:ONID:STYPE:UNUSED(channelnumber in enigma1)
+                    #	X   X  X    X    D     D
 
-#	REFTYPE:FLAGS:STYPE:SID:TSID:ONID:NS:PARENT_SID:PARENT_TSID:UNUSED
-#	D       D     X     X   X    X    X  X          X           X
+                    #	REFTYPE:FLAGS:STYPE:SID:TSID:ONID:NS:PARENT_SID:PARENT_TSID:UNUSED
+                    #	D       D     X     X   X    X    X  X          X           X
 
-#                                  "SID:TID:ONID:Namespace"
-#                                  {:04x}:{:04x}:{:04x}:{:08x}
+                    #               SID : TID  : ONID : Namespace"
+                    #             {:04x}:{:04x}:{:04x}:{:08x}
                     service_ref = '{:04x}:{}:{}:{}'.format(num, cat_id[:4], cat_id[4:], NAMESPACE)
 
                     if not x['stream-name'].startswith('placeholder_'):
@@ -937,9 +962,15 @@ class Provider(object):
                                     # have a match use the panels custom service ref
                                     x['serviceRef'] = "{}:{}".format(x['stream-type'],self._panel_bouquet[m3u_stream_file])
                                     continue
+
                         if not x.get('serviceRefOverride'):
                             # if service ref is not overridden in xml update
-                            x['serviceRef'] = "{}:0:1:{}:0:0:0".format(x['stream-type'], service_ref)
+                            x['serviceRef'] = {'1'   : "{}:0:1:{}:0:0:{}".format(x['stream-type'], service_ref, self.config.gstreamer),
+                                               '4097': "{}:0:1:{}:0:0:{}".format(x['stream-type'], service_ref, self.config.gstreamer),
+                                               '5001': "{}:0:1:{}:0:0:0".format(x['stream-type'], service_ref),
+                                               '5002': "{}:0:1:{}:0:0:0".format(x['stream-type'], service_ref),
+                                               }[x['stream-type']]
+
                         num += 1
                     else:
                         x['serviceRef'] = PLACEHOLDER_SERVICE
@@ -1040,7 +1071,7 @@ class Provider(object):
         mapping_file = self._get_mapping_file()
         if mapping_file:
             try:
-                tree = ET.ElementTree(file=mapping_file)
+                tree = ET.parse(mapping_file).getroot()
                 for group in tree.findall('.//xmltvextrasources/group'):
                     self._xmltv_sources_list['{} - {}'.format(self.config.name, group.attrib.get('id'))] = [url.text for url in group] # Group-name list
             except Exception:
@@ -1052,7 +1083,7 @@ class Provider(object):
     def save_map_xml(self):
         """Create mapping file"""
         mappingfile = os.path.join(CFGPATH, 'epg', slugify(self.config.name)+'-sort-current.xml')
-        indent = "  "
+        indent = "\t"
         vod_category_output = False
 
         if self._dictchannels:
@@ -1239,8 +1270,8 @@ class Provider(object):
                 if cat in vod_categories and not self.config.multi_vod:
                     cat_filename = "VOD"
 
-                bouquet_filepath = os.path.join(ENIGMAPATH, 'userbouquet.e2m3u2b_iptv_{}_{}.tv'
-                                                .format(provider_filename, cat_filename))
+                bouquet_filepath = os.path.join(ENIGMAPATH, 'userbouquet.e2m3u2b_iptv_{}_{}.tv'.format(provider_filename, cat_filename))
+
                 if DEBUG:
                     print("Creating: {}".format(bouquet_filepath))
 
@@ -1323,7 +1354,7 @@ class Provider(object):
         except OSError, e:  # race condition guard
             if e.errno != errno.EEXIST:
                 raise
-        indent = "  "
+        indent = "\t"
         tvg_check = []
 
         if self._dictchannels:
@@ -1351,8 +1382,8 @@ class Provider(object):
                 f.write('</channels>\n')
 
             if any(tvg_check) and self.config.epg_url != DEFAULTEPG:
-                self._xmltv_sources_list.update({'{} - {}'.format(self.config.name, 'Default EPG'): [DEFAULTEPG]})
-            self._xmltv_sources_list.update({'{} - {}'.format(self.config.name, 'Main EPG'): [self.config.epg_url]})
+                self._xmltv_sources_list.update({'{} - {}'.format(slugify(self.config.name, lowercase=False), 'Default EPG'): [DEFAULTEPG]})
+            self._xmltv_sources_list.update({'{} - {}'.format(slugify(self.config.name, lowercase=False), 'Main EPG'): [self.config.epg_url]})
             # create epg-importer sources file for providers feed
             self._create_epgimport_source(self._xmltv_sources_list)
             # create CrossEPG sources file for providers feed
@@ -1384,6 +1415,14 @@ class Config(object):
         <password><![CDATA[]]></password><!-- (Optional) will replace PASSWORD placeholder in urls -->\r
         <iptvtypes>0</iptvtypes><!-- Change all streams to IPTV type (0 or 1) -->\r
         <streamtypetv></streamtypetv><!-- (Optional) Custom TV stream type (e.g. 1, 4097, 5001 or 5002) -->\r
+        <gstreamer>0</gstreamer><!-- (Optional) Stream type: 0 (no buffering), 1 (buffering enabled) or 3 (progressive download and buffering enabled) -->\r
+        <flv2mpeg4>0</flv2mpeg4><!-- (Optional) EXT3_FLV2MPEG4_CONVERTER (0 or 1) -->\r
+        <progressive>0</progressive><!-- (Optional) EXT3_PLAYBACK_PROGRESSIVE (0 or 1) -->\r
+        <livets>0</livets><!-- (Optional) EXT3_PLAYBACK_LIVETS (0 or 1) -->\r
+        <ffmpegoption><![CDATA[]]></ffmpegoption><!-- (Optional) EXT3_FFMPEG_SETTING_STRING additional ffmpeg options (0 or 1) -->\r
+        <ringbuffermaxsize>32768</ringbuffermaxsize><!-- (Optional) GST_RING_BUFFER_MAXSIZE ring buffer size in kilobytes -->\r
+        <buffersize>8192</buffersize><!-- (Optional) GST_BUFFER_SIZE buffer size in kilobytes -->\r
+        <bufferduration>0</bufferduration><!-- (Optional) GST_BUFFER_DURATION buffer duration in seconds -->\r
         <streamtypevod></streamtypevod><!-- (Optional) Custom VOD stream type (e.g. 4097, 5001 or 5002) -->\r
         <multivod>0</multivod><!-- Split VOD into seperate categories (0 or 1) -->\r
         <allbouquet>1</allbouquet><!-- Create all channels bouquet -->\r
@@ -1403,6 +1442,14 @@ class Config(object):
         <password><![CDATA[]]></password><!-- (Optional) will replace PASSWORD placeholder in urls -->\r
         <iptvtypes>0</iptvtypes><!-- Change all streams to IPTV type (0 or 1) -->\r
         <streamtypetv></streamtypetv><!-- (Optional) Custom TV service type (e.g. 1, 4097, 5001 or 5002) -->\r
+        <gstreamer>0</gstreamer><!-- (Optional) Stream type: 0 (no buffering), 1 (buffering enabled) or 3 (progressive download and buffering enabled) -->\r
+        <flv2mpeg4>0</flv2mpeg4><!-- (Optional) EXT3_FLV2MPEG4_CONVERTER (0 or 1) -->\r
+        <progressive>0</progressive><!-- (Optional) EXT3_PLAYBACK_PROGRESSIVE (0 or 1) -->\r
+        <livets>0</livets><!-- (Optional) EXT3_PLAYBACK_LIVETS (0 or 1) -->\r
+        <ffmpegoption><![CDATA[]]></ffmpegoption><!-- (Optional) EXT3_FFMPEG_SETTING_STRING additional ffmpeg options (0 or 1) -->\r
+        <ringbuffermaxsize>32768</ringbuffermaxsize><!-- (Optional) GST_RING_BUFFER_MAXSIZE ring buffer size in kilobytes -->\r
+        <buffersize>8192</buffersize><!-- (Optional) GST_BUFFER_SIZE buffer size in kilobytes -->\r
+        <bufferduration>0</bufferduration><!-- (Optional) GST_BUFFER_DURATION buffer duration in seconds -->\r
         <streamtypevod></streamtypevod><!-- (Optional) Custom VOD service type (e.g. 4097, 5001 or 5002) -->\r
         <multivod>0</multivod><!-- Split VOD into seperate categories (0 or 1) -->\r
         <allbouquet>1</allbouquet><!-- Create all channels bouquet -->\r
@@ -1410,8 +1457,7 @@ class Config(object):
         <iconpath>/usr/share/enigma2/picon/</iconpath><!-- Location to store picons -->\r
         <xcludesref>1</xcludesref><!-- Disable service ref overriding from override.xml file (0 or 1) -->\r
         <bouqueturl><![CDATA[]]></bouqueturl><!-- (Optional) url to download providers bouquet - to map custom service references -->\r
-        <bouquetdownload>0</bouquetdownload><!-- Download providers bouquet (use default url) must have username and password set above - to map custom service references -->\r
-        <bouquettop>0</bouquettop><!-- Place IPTV bouquets at top (0 or 1)--> \r
+        <bouquetdownload>0</bouquetdownload><!-- Download providers bouquet (use default url) must have username and password set above - to map custom service references -->\r <bouquettop>0</bouquettop><!-- Place IPTV bouquets at top (0 or 1)--> \r
     </supplier>\r
 </config>""")
 
@@ -1420,14 +1466,14 @@ class Config(object):
         self.providers = OrderedDict()
 
         try:
-            tree = ET.ElementTree(file=configfile)
+            tree = ET.parse(configfile).getroot()
             for node in tree.findall('.//supplier'):
                 provider = ProviderConfig()
 
                 if node is not None:
                     for child in node:
                         if child.tag == 'name':
-                            provider.name = '' if child.text is None else child.text.strip()
+                            provider.name = '' if child.text is None else child.text.encode('utf-8').strip()
                         if child.tag == 'enabled':
                             provider.enabled = True if child.text == '1' else False
                         if child.tag == 'settingslevel':
@@ -1446,6 +1492,26 @@ class Config(object):
                             provider.iptv_types = True if child.text == '1' else False
                         if child.tag == 'streamtypetv':
                             provider.streamtype_tv = '' if child.text is None else child.text.strip()
+
+                        # 4097 Gstreamer options (0-no buffering, 1-buffering enabled, 3- http progressive download & buffering enabl)
+                        if child.tag == 'gstreamer':
+                            provider.gstreamer = '0' if child.text is None or child.text not in ('0', '1', '3') else child.text.strip()
+                        # 5002 ExtEplayer3 options
+                        if child.tag == 'flv2mpeg4':
+                            provider.flv2mpeg4 = '0' if child.text is None or child.text not in ('0', '1') else child.text.strip()   # EXT3_FLV2MPEG4_CONVERTER
+                        if child.tag == 'progressive':
+                            provider.progressive = '0' if child.text is None or child.text not in ('0', '1') else child.text.strip() # EXT3_PLAYBACK_PROGRESSIVE
+                        if child.tag == 'livets':
+                            provider.live_ts = '0' if child.text is None or child.text not in ('0', '1') else child.text.strip()     # EXT3_PLAYBACK_LIVETS
+                        if child.tag == 'ffmpegoption':
+                            provider.ffmpeg_option = '' if child.text is None else child.text.strip()  # EXT3_FFMPEG_SETTING_STRING
+                        # 5001 GstPlayer options
+                        if child.tag == 'ringbuffermaxsize':
+                            provider.ring_buffer_maxsize = 32768 if child.text is None else int(child.text.strip()) # GST_RING_BUFFER_MAXSIZE
+                        if child.tag == 'buffersize ':
+                            provider.buffer_size = 8192 if child.text is None else int(child.text.strip())          # GST_BUFFER_SIZE
+                        if child.tag == 'bufferduration':
+                            provider.buffer_duration = 0 if child.text is None else int(child.text.strip())             # GST_BUFFER_DURATION
                         if child.tag == 'streamtypevod':
                             provider.streamtype_vod = '' if child.text is None else child.text.strip()
                         if child.tag == 'multivod':
@@ -1483,7 +1549,7 @@ class Config(object):
         """
 
         config_file = os.path.join(os.path.join(CFGPATH, 'config.xml'))
-        indent = "  "
+        indent = "\t"
 
         if self.providers:
             with open(config_file, 'wb') as f:
@@ -1509,6 +1575,14 @@ class Config(object):
                     f.write('{}<providerupdate><![CDATA[{}]]></providerupdate><!-- (Optional) Provider update url -->\r\n'.format(2 * indent, provider.provider_update_url))
                     f.write('{}<iptvtypes>{}</iptvtypes><!-- Change all TV streams to IPTV type (0 or 1) -->\r\n'.format(2 * indent, '1' if provider.iptv_types else '0'))
                     f.write('{}<streamtypetv>{}</streamtypetv><!-- (Optional) Custom TV stream type (e.g. 1, 4097, 5001 or 5002 -->\r\n'.format(2 * indent, provider.streamtype_tv))
+                    f.write('{}<gstreamer>{}</gstreamer><!-- (Optional) Stream type: 0 (no buffering), 1 (buffering enabled) or 3 (progressive download and buffering enabled) -->\r\n'.format(2 * indent, provider.gstreamer))
+                    f.write('{}<flv2mpeg4>{}</flv2mpeg4><!-- (Optional) EXT3_FLV2MPEG4_CONVERTER (0 or 1) -->\r\n'.format(2 * indent, provider.flv2mpeg4))
+                    f.write('{}<progressive>{}</progressive><!-- (Optional) EXT3_PLAYBACK_PROGRESSIVE (0 or 1) -->\r\n'.format(2 * indent, provider.progressive))
+                    f.write('{}<livets>{}</livets><!-- (Optional) EXT3_PLAYBACK_LIVETS (0 or 1) -->\r\n'.format(2 * indent, provider.live_ts))
+                    f.write('{}<ffmpegoption><![CDATA[{}]]></ffmpegoption><!-- (Optional) EXT3_FFMPEG_SETTING_STRING additional ffmpeg options (0 or 1) -->\r\n'.format(2 * indent, provider.ffmpeg_option))
+                    f.write('{}<ringbuffermaxsize>{}</ringbuffermaxsize><!-- (Optional) GST_RING_BUFFER_MAXSIZE ring buffer size in kilobytes -->\r\n'.format(2 * indent, provider.ring_buffer_maxsize))
+                    f.write('{}<buffersize>{}</buffersize><!-- (Optional) GST_BUFFER_SIZE buffer size in kilobytes -->\r\n'.format(2 * indent, provider.buffer_size))
+                    f.write('{}<bufferduration>{}</bufferduration><!-- (Optional) GST_BUFFER_DURATION buffer duration in seconds -->\r\n'.format(2 * indent, provider.buffer_duration))
                     f.write('{}<streamtypevod>{}</streamtypevod><!-- (Optional) Custom VOD stream type (e.g. 4097, 5001 or 5002 -->\r\n'.format(2 * indent, provider.streamtype_vod))
                     f.write('{}<multivod>{}</multivod><!-- Split VOD into seperate categories (0 or 1) -->\r\n'.format(2 * indent, '1' if provider.multi_vod else '0'))
                     f.write('{}<allbouquet>{}</allbouquet><!-- Create all channels bouquet (0 or 1) -->\r\n'.format(2 * indent, '1' if provider.all_bouquet else '0'))

@@ -23,6 +23,32 @@ msgstr "Інформація"
 msgid "Close"
 msgstr "Закрити"
 
+#: about.py:42
+msgid "BoxType:"
+msgstr "Модель:"
+
+#: about.py:43
+msgid "Image:"
+msgstr "Імідж:"
+
+#: about.py:46
+msgid "Multi provider IPTV bouquet maker for Enigma2\n"
+msgstr ""
+"Універсальний плагін Enigma2 для створення\n"
+"плейлистів будь-яких IPTV провайдерів\n"
+
+#: about.py:47
+msgid ""
+"This plugin is free and should not be resold\n"
+"\n"
+msgstr "" 
+"Цей плагін є безкоштовним і не може бути перепроданим\n"
+"\n"
+
+#: about.py:48
+msgid "Plugin authors:\n"
+msgstr ""
+
 #: menu.py:62 menu.py:167
 msgid "Exit"
 msgstr "Вийти"
@@ -109,15 +135,15 @@ msgstr "Оновлювати букети при включенні ресиве
 
 #: menu.py:186
 msgid "Picon save path:"
-msgstr "Шлях для збереження піконів"
+msgstr "Шлях для збереження піконів:"
 
 #: menu.py:186
 msgid "Select where to save picons (if download is enabled)"
 msgstr "Вкажіть де зберігати пікони (якщо включене їх завантаження)"
 
 #: menu.py:187
-msgid "Attempt Epg Import"
-msgstr "Намагатись імпортувати EPG"
+msgid "Attempt Epg Import:"
+msgstr "Намагатись імпортувати EPG:"
 
 #: menu.py:187
 msgid "Automatically run Epg Import after bouquet update"
@@ -259,8 +285,8 @@ msgid "Choose level of settings. Expert shows all options"
 msgstr "Выберіть режим налаштувань. В expert доступні всі налаштування"
 
 #: providers.py:232
-msgid "Providers M3U url. USERNAME & PASSWORD will be replaced by values below"
-msgstr "Посилання на M3U провайдера. USERNAME & PASSWORD будуть автоматично замінені в url"
+msgid "Providers M3U url. If it contains USERNAME & PASSWORD templates,\nthey will be replaced by values below"
+msgstr "Посилання на M3U провайдера. Якщо слова-шаблони USERNAME & PASSWORD\nприсутні в посиланні вони будуть автоматично замінені на задані нижче"
 
 #: providers.py:233
 msgid "Used EPG:"
@@ -271,8 +297,8 @@ msgid "If selected default, the plugin will use a predefined EPG by r.rusya"
 msgstr "Якщо ви оберете default, то буде використовуватись EPG by r.rusya за замовчуванням"
 
 #: providers.py:235
-msgid "Providers EPG url. USERNAME & PASSWORD will be replaced by values below"
-msgstr "Посилання на EPG провайдера. USERNAME & PASSWORD будуть автоматично замінені в url"
+msgid "url link to EPG issued by provider. Leave blank if the m3u playlist has url-tvg or url-epg tags"
+msgstr "Посилання на EPG провайдера. Залиште порожнім якщо в m3u плейлисті є теги url-epg або url-tvg"
 
 #: providers.py:236
 msgid "Username"
@@ -307,8 +333,8 @@ msgid "Automatically download Picons"
 msgstr "Автоматично завантажувати пікони"
 
 #: providers.py:240
-msgid "IPTV bouquet position"
-msgstr "Позиція IPTV букетів в списку"
+msgid "IPTV bouquet position:"
+msgstr "Позиція IPTV букетів в списку:"
 
 #: providers.py:240
 msgid "Select where to place IPTV bouquets"
@@ -316,7 +342,7 @@ msgstr "Выберіть де размістити IPTV букети"
 
 #: providers.py:241
 msgid "Create all channels bouquet:"
-msgstr "Створити All Channels букет"
+msgstr "Створити All Channels букет:"
 
 #: providers.py:241
 msgid "Create a bouquet containing all channels"
@@ -329,44 +355,44 @@ msgstr ""
 #: providers.py:243
 msgid ""
 "Normally should be left disabled. Setting to enabled may allow recording on "
-"some boxes. If you playback issues (e.g. stuttering on channels) set back to "
+"some boxes.\nIf you playback issues (e.g. stuttering on channels) set back to "
 "disabled"
 msgstr ""
 "Зазвичай має бути виключено. Активація може ініціювати запис на"
-"деяких ресиверах. Якщо у Вас проблеми з с відтворенням -"
+"деяких ресиверах.\nЯкщо у Вас проблеми з с відтворенням -"
 "виключіть"
 
 #: providers.py:244
-msgid "TV Stream Type:"
+msgid "Live Player Type:"
 msgstr ""
 
 #: providers.py:244
-msgid "Stream type for TV services"
+msgid "Stream player type for TV services"
 msgstr ""
 
 #: providers.py:245
-msgid "VOD Stream Type:"
+msgid "VOD Player Type:"
 msgstr ""
 
 #: providers.py:245
-msgid "Stream type for VOD services"
+msgid "Stream player type for VOD services"
 msgstr ""
 
 #: providers.py:246
-msgid "Override service refs"
+msgid "Override service refs:"
 msgstr ""
 
 #: providers.py:246
 msgid ""
-"Should be left disabled unless you need to use the override.xml to override "
-"service refs (e.g. for DVB to IPTV EPG mapping)"
+"Should be left disabled unless you need to use the override.xml to override service refs\n"
+"(e.g. for DVB to IPTV EPG mapping)"
 msgstr ""
-"Має бути виключено якщо ви не користуєтесь override.xml для перевизначення "
-"service refs (для DVB - IPTV EPG перевизначення і т.д.)"
+"Має бути виключено якщо ви не користуєтесь override.xml для перевизначення srvice refs\n"
+"(для DVB - IPTV EPG перевизначення і т.д.)"
 
 #: providers.py:247
-msgid "Check providers bouquet"
-msgstr "Перевірити букети провайдера"
+msgid "Check providers bouquet:"
+msgstr "Перевірити букети провайдера:"
 
 #: providers.py:247
 msgid "Enable this option to check and use providers custom service refs"

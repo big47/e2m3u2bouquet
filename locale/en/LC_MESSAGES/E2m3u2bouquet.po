@@ -12,7 +12,7 @@ msgstr ""
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
-"Language: \n"
+"Language: en_EN\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -23,6 +23,24 @@ msgstr ""
 
 #: about.py:33 menu.py:261 menu.py:280 menu.py:329
 msgid "Close"
+msgstr ""
+
+#: about.py:42
+msgid "BoxType:"
+msgstr ""
+                                                                                                                                                             
+#: about.py:43                                                                                                                                               
+msgid "Image:"
+msgstr ""
+                                                                                                                                                             
+#: about.py:46                                                                                                                                               
+msgid "Multi provider IPTV bouquet maker for Enigma2\n"
+msgstr ""                                                                                       
+                                                                                                                                                             
+#: about.py:47
+msgid ""
+"This plugin is free and should not be resold\n"
+"\n"
 msgstr ""
 
 #: menu.py:65 menu.py:170
@@ -114,7 +132,7 @@ msgid "Select where to save picons (if download is enabled)"
 msgstr ""
 
 #: menu.py:190
-msgid "Attempt Epg Import"
+msgid "Attempt Epg Import:"
 msgstr ""
 
 #: menu.py:190
@@ -253,7 +271,7 @@ msgid "Choose level of settings. Expert shows all options"
 msgstr ""
 
 #: providers.py:235
-msgid "Providers M3U url. USERNAME & PASSWORD will be replaced by values below"
+msgid "Providers M3U url. If it contains USERNAME & PASSWORD templates,\nthey will be replaced by values below"
 msgstr ""
 
 #: providers.py:236
@@ -265,7 +283,7 @@ msgid "If selected default, the plugin will use a predefined EPG by r.rusya"
 msgstr ""
 
 #: providers.py:238
-msgid "Providers EPG url. USERNAME & PASSWORD will be replaced by values below"
+msgid "url link to EPG issued by provider. Leave blank if the m3u playlist has url-tvg or url-epg tags"
 msgstr ""
 
 #: providers.py:239
@@ -301,7 +319,7 @@ msgid "Automatically download Picons"
 msgstr ""
 
 #: providers.py:243
-msgid "IPTV bouquet position"
+msgid "IPTV bouquet position:"
 msgstr ""
 
 #: providers.py:243
@@ -323,38 +341,38 @@ msgstr ""
 #: providers.py:246
 msgid ""
 "Normally should be left disabled. Setting to enabled may allow recording on "
-"some boxes. If you playback issues (e.g. stuttering on channels) set back to "
+"some boxes.\nIf you playback issues (e.g. stuttering on channels) set back to "
 "disabled"
 msgstr ""
 
 #: providers.py:247
-msgid "TV Stream Type:"
+msgid "Live Player Type:"
 msgstr ""
 
 #: providers.py:247
-msgid "Stream type for TV services"
+msgid "Stream player type for TV services"
 msgstr ""
 
 #: providers.py:248
-msgid "VOD Stream Type:"
+msgid "VOD Player Type:"
 msgstr ""
 
 #: providers.py:248
-msgid "Stream type for VOD services"
+msgid "Stream player type for VOD services"
 msgstr ""
 
 #: providers.py:249
-msgid "Override service refs"
+msgid "Override service refs:"
 msgstr ""
 
 #: providers.py:249
 msgid ""
-"Should be left disabled unless you need to use the override.xml to override "
-"service refs (e.g. for DVB to IPTV EPG mapping)"
+"Should be left disabled unless you need to use the override.xml to override service refs\n"
+"(e.g. for DVB to IPTV EPG mapping)"
 msgstr ""
 
 #: providers.py:250
-msgid "Check providers bouquet"
+msgid "Check providers bouquet:"
 msgstr ""
 
 #: providers.py:250

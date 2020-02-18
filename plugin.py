@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # for localized messages
 from . import _
 
@@ -6,22 +7,20 @@ import os
 import errno
 import enigma
 import log
-import urllib
 
 from menu import E2m3u2b_Menu
 from menu import E2m3u2b_Check
 
 from enigma import eTimer
-from Components.config import config, ConfigEnableDisable, ConfigSubsection, \
-            ConfigYesNo, ConfigClock, getConfigListEntry, ConfigText, \
-            ConfigSelection, ConfigNumber, ConfigSubDict, NoSave, ConfigPassword, \
-            ConfigSelectionNumber
+from Components.config import config, ConfigOnOff, ConfigSubsection, \
+                              ConfigYesNo, ConfigClock, ConfigText, \
+                              ConfigSelection, ConfigSubDict, ConfigSelectionNumber
 from Components.PluginComponent import plugins
 from Components.Harddisk import harddiskmanager
 from Screens.MessageBox import MessageBox
 from Plugins.Plugin import PluginDescriptor
-
-from twisted.internet import reactor, threads
+from Tools.Directories import fileExists, createDir
+from twisted.internet import threads
 import twisted.python.runtime
 
 import e2m3u2bouquet
@@ -75,8 +74,6 @@ def getMounted():
 
 # Set default configuration
 config.plugins.e2m3u2b = ConfigSubsection()
-config.plugins.e2m3u2b.cfglevel = ConfigText(default='')
-config.plugins.e2m3u2b.debug = ConfigEnableDisable(default=False)
 config.plugins.e2m3u2b.autobouquetupdate = ConfigYesNo(default=False)
 config.plugins.e2m3u2b.scheduletype = ConfigSelection(default='interval', choices=['interval', 'fixed time'])
 config.plugins.e2m3u2b.updateinterval = ConfigSelectionNumber(default=6, min=2, max=48, stepwidth=1)
@@ -87,23 +84,7 @@ config.plugins.e2m3u2b.last_update = ConfigText()
 config.plugins.e2m3u2b.extensions = ConfigYesNo(default=False)
 config.plugins.e2m3u2b.mainmenu = ConfigYesNo(default=False)
 config.plugins.e2m3u2b.do_epgimport = ConfigYesNo(default=True)
-# legacy config
-config.plugins.e2m3u2b.providername = ConfigText(default='')
-config.plugins.e2m3u2b.username = ConfigText(default='')
-config.plugins.e2m3u2b.password = ConfigText(default='')
-config.plugins.e2m3u2b.iptvtypes = ConfigText(default='')
-config.plugins.e2m3u2b.multivod = ConfigText(default='')
-config.plugins.e2m3u2b.bouquetpos = ConfigText(default='')
-config.plugins.e2m3u2b.allbouquet = ConfigText(default='')
-config.plugins.e2m3u2b.picons = ConfigText(default='')
-config.plugins.e2m3u2b.srefoverride = ConfigText(default='')
-config.plugins.e2m3u2b.bouquetdownload = ConfigText(default='')
-config.plugins.e2m3u2b.last_provider_update = ConfigText(default='')
-
-class AppUrlOpener(urllib.FancyURLopener):
-    """Set user agent for downloads
-    """
-    version = 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Safari/537.36'
+config.plugins.e2m3u2b.debug = ConfigOnOff(default=False)
 
 class AutoStartTimer:
     def __init__(self, session):
@@ -113,7 +94,7 @@ class AutoStartTimer:
         self.update()
 
     def get_wake_time(self):
-        print>> log, '[e2m3u2b] AutoStartTimer -> get_wake_time'
+        print>> log, '[e2m3u2b] ({}) AutoStartTimer -> get_wake_time'.format(time.strftime('%c', time.localtime(int(time.time()))))
         if config.plugins.e2m3u2b.autobouquetupdate.value:
             if config.plugins.e2m3u2b.scheduletype.value == 'interval':
                 interval = int(config.plugins.e2m3u2b.updateinterval.value)
@@ -127,13 +108,12 @@ class AutoStartTimer:
 
                 fixed_wake_time = int(time.mktime((now.tm_year, now.tm_mon, now.tm_mday, fixed_time_clock[0],
                                                    fixed_time_clock[1], now.tm_sec, now.tm_wday, now.tm_yday, now.tm_isdst)))
-                print('fixed schedule time: ', time.asctime(time.localtime(fixed_wake_time)))
                 return fixed_wake_time
         else:
             return -1
 
     def update(self):
-        print>>log, '[e2m3u2b] AutoStartTimer -> update'
+        print>>log, '[e2m3u2b] ({}) AutoStartTimer -> update'.format(time.strftime('%c', time.localtime(int(time.time()))))
         self.timer.stop()
         wake = self.get_wake_time()
         nowt = time.time()
@@ -154,14 +134,14 @@ class AutoStartTimer:
             wake = -1
 
         # print>> log, '[e2m3u2b] next wake up time {} (now={})'.format(wake, now)
-        print>> log, '[e2m3u2b] next wake up time {} (now={})'.format(time.strftime('%c', time.localtime(wake)), time.strftime('%c', time.localtime(now)))
+        print>> log, '[e2m3u2b] ({}) next wake up time {}'.format(time.strftime('%c', time.localtime(now)), time.strftime('%c', time.localtime(wake)))
         return wake
 
     def on_timer(self):
         self.timer.stop()
         now = int(time.time())
         wake = now
-        print>> log, '[e2m3u2b] on_timer occured at {}'.format(time.strftime('%c', time.localtime(now)))
+        print>> log, '[e2m3u2b] ({}) on_timer occured'.format(time.strftime('%c', time.localtime(now)))
         print>> log, '[e2m3u2b] Stating bouquet update because auto update bouquet schedule is enabled'
 
         if config.plugins.e2m3u2b.scheduletype.value == 'fixed time':
@@ -178,15 +158,13 @@ class AutoStartTimer:
         self.update()
 
     def get_status(self):
-        print>> log, '[e2m3u2b] AutoStartTimer -> getStatus'
+        print>> log, '[e2m3u2b] ({}) AutoStartTimer -> getStatus'.format(time.strftime('%c', time.localtime(int(time.time()))))
 
 def start_update(epgimport=None):
     """Run m3u channel update
     """
-    print('start_update called')
-
     e2m3u2b_config = e2m3u2bouquet.Config()
-    if os.path.isfile(os.path.join(e2m3u2bouquet.CFGPATH, 'config.xml')):
+    if fileExists(os.path.join(e2m3u2bouquet.CFGPATH, 'config.xml')):
         e2m3u2b_config.read_config(os.path.join(e2m3u2bouquet.CFGPATH, 'config.xml'))
 
         providers_to_process = []
@@ -210,9 +188,9 @@ def start_update(epgimport=None):
 def start_update_callback(result, epgimport_sourcefiles, start_time, epgimport=None):
     elapsed_secs = (int(time.time())) - start_time
 
-    msg = 'Finished bouquet update in {}s'.format(str(elapsed_secs))
+    msg = 'Finished bouquets update in {}s'.format(str(elapsed_secs))
     e2m3u2bouquet.Status.message = msg
-    print>> log, '[e2m3u2b] {}'.format(msg)
+    print>> log, '[e2m3u2b] ({}) {}'.format(time.strftime('%c', time.localtime(int(time.time()))), msg)
 
     # Attempt automatic epg import is option enabled and epgimport plugin detected
     if EPGImport and config.plugins.e2m3u2b.do_epgimport.value is True:
@@ -239,9 +217,9 @@ def start_process_providers(providers_to_process, e2m3u2b_config):
         if not provider.config.icon_path:
             provider.config.icon_path = config.plugins.e2m3u2b.iconpath.value
 
-        print>> log, '[e2m3u2b] Starting backend script {}'.format(provider.config.name)
+        print>> log, '[e2m3u2b] ({}) Starting update: {}'.format(time.strftime('%c', time.localtime(int(time.time()))), provider.config.name)
         provider.process_provider()
-        print>> log, '[e2m3u2b] Finished backend script {}'.format(provider.config.name)
+        print>> log, '[e2m3u2b] ({}) Finished update: {}'.format(time.strftime('%c', time.localtime(int(time.time()))), provider.config.name)
 
     if providers_updated:
         e2m3u2b_config.write_config()
@@ -261,20 +239,18 @@ def epgimport_sources(sourcefiles):
 
 
 def epgimport_done(reboot=False, epgfile=None):
-    print>> log, '[e2m3u2b] Automatic epg import finished'
+    print>> log, '[e2m3u2b] ({}) Automatic epg import finished'.format(time.strftime('%c', time.localtime(int(time.time()))))
 
 
 def do_reset():
     """Reset bouquets and
     epg importer config by running the script uninstall method
     """
-    print('do_reset called')
     e2m3u2bouquet.uninstaller()
     e2m3u2bouquet.reload_bouquets()
 
 
 def main(session, **kwargs):
-    urllib._urlopener = AppUrlOpener()
     check_cfg_folder()
     set_default_do_epgimport()
 
@@ -286,11 +262,9 @@ def main(session, **kwargs):
 
 
 def set_default_do_epgimport():
-    if config.plugins.e2m3u2b.cfglevel.value == '1':
-        # default to not try epg import if existing config exists
-        config.plugins.e2m3u2b.do_epgimport.value = False
-        config.plugins.e2m3u2b.do_epgimport.save()
-
+    # default to not try epg import if existing config exists
+    config.plugins.e2m3u2b.do_epgimport.value = False
+    config.plugins.e2m3u2b.do_epgimport.save()
 
 def open_menu(session):
     session.open(E2m3u2b_Menu)
@@ -300,18 +274,17 @@ def check_cfg_folder():
     """Make config folder if it doesn't exist
     """
     try:
-        os.makedirs(e2m3u2bouquet.CFGPATH)
+        createDir(e2m3u2bouquet.CFGPATH)
     except OSError, e:      # race condition guard
         if e.errno != errno.EEXIST:
             print>> log, "[e2m3u2b] unable to create config dir:", e
             if config.plugins.e2m3u2b.debug.value:
                 raise
 
-
 def done_configuring():
     """Check for new config values for auto start
     """
-    print>>log, '[e2m3u2b] Done configuring'
+    print>>log, '[e2m3u2b] ({}) Done configuring'.format(time.strftime('%c', time.localtime(int(time.time()))))
     if autoStartTimer is not None:
         autoStartTimer.update()
 
@@ -322,7 +295,7 @@ def on_boot_start_check():
     """
     now = int(time.time())
     # TODO Skip if there is an upcoming scheduled update
-    print>>log, '[e2m3u2b] Stating bouquet update because auto update bouquet at start enabled'
+    print>>log, '[e2m3u2b] ({}) Stating bouquet update because auto update bouquet at start enabled'.format(time.strftime('%c', time.localtime(int(time.time()))))
     try:
         start_update()
     except Exception, e:
@@ -330,16 +303,14 @@ def on_boot_start_check():
         if config.plugins.e2m3u2b.debug.value:
             raise
 
-
 def autostart(reason, session=None, **kwargs):
     # reason is 0 at start and 1 at shutdown
     # these globals need declared as they are reassigned here
     global autoStartTimer
     global _session
-    urllib._urlopener = AppUrlOpener()
     set_default_do_epgimport()
 
-    print>>log, '[e2m3u2b] autostart {} occured at {}'.format(reason, time.strftime('%c', time.localtime(time.time())))
+    print>>log, '[e2m3u2b] ({}) autostart {} occured'.format(time.strftime('%c', time.localtime(time.time())), reason)
     if reason == 0 and _session is None:
         if session is not None:
             _session = session
@@ -348,14 +319,12 @@ def autostart(reason, session=None, **kwargs):
             if config.plugins.e2m3u2b.autobouquetupdateatboot.value:
                 on_boot_start_check()
     else:
-        print>>log, '[e2m3u2b] stop'
-
+        print>>log, '[e2m3u2b] ({}) stop'.format(time.strftime('%c', time.localtime(time.time())))
 
 def get_next_wakeup():
     # don't enable waking from deep standby for now
-    print>> log, '[e2m3u2b] get_next_wakeup'
+    print>> log, '[e2m3u2b] ({}) get_next_wakeup'.format(time.strftime('%c', time.localtime(time.time())))
     return -1
-
 
 def menuHook(menuid):
     """ Called whenever a menu is created"""
@@ -363,19 +332,16 @@ def menuHook(menuid):
         return [(plugin_name, quick_import_menu, plugin_name, 45)]
     return[]
 
-
 def extensions_menu(session, **kwargs):
     """ Needed for the extension menu descriptor
     """
     main(session, **kwargs)
-
 
 def quick_import_menu(session, **kwargs):
     session.openWithCallback(quick_import_callback, MessageBox, _('Update of channels will start.\n'
                                                                   'This may take a few minutes.\n'
                                                                   'Proceed?'), MessageBox.TYPE_YESNO,
                                                                 timeout=15, default=True)
-
 def quick_import_callback(confirmed):
     if not confirmed:
         return
@@ -386,9 +352,8 @@ def quick_import_callback(confirmed):
         if config.plugins.e2m3u2b.debug.value:
             raise
 
-
 def update_extensions_menu(cfg_el):
-    print>> log, '[e2m3u2b] update extensions menu'
+    print>> log, '[e2m3u2b] ({}) update extensions menu'.format(time.strftime('%c', time.localtime(time.time())))
     try:
         if cfg_el.value:
             plugins.addPlugin(extDescriptorQuick)
@@ -397,9 +362,8 @@ def update_extensions_menu(cfg_el):
     except Exception, e:
         print>> log, '[e2m3u2b] Failed to update extensions menu: ', e
 
-
 def update_main_menu(cfg_el):
-    print>> log, '[e2m3u2b] update main menu'
+    print>> log, '[e2m3u2b] ({}) update main menu'.format(time.strftime('%c', time.localtime(time.time())))
     try:
         if cfg_el.value:
             plugins.addPlugin(extDescriptorQuickMain)
@@ -408,16 +372,14 @@ def update_main_menu(cfg_el):
     except Exception, e:
         print>> log, '[e2m3u2b] Failed to update main menu: ', e
 
-plugin_name = 'IPTV Bouquet Maker - Pepsik edition'
+plugin_name = _('IPTV Bouquet Maker - Pepsik edition')
 plugin_description = _("Automated M3U playlists importer")
 
-print('[e2m3u2b] add notifier')
 extDescriptor = PluginDescriptor(name=plugin_name, description=plugin_description, where=PluginDescriptor.WHERE_EXTENSIONSMENU, fnc=extensions_menu)
 extDescriptorQuick = PluginDescriptor(name=plugin_name, description=plugin_description, where=PluginDescriptor.WHERE_EXTENSIONSMENU, fnc=quick_import_menu)
 extDescriptorQuickMain = PluginDescriptor(name=plugin_name, description=plugin_description, where=PluginDescriptor.WHERE_MENU, fnc=menuHook)
 config.plugins.e2m3u2b.extensions.addNotifier(update_extensions_menu, initial_call=False)
 config.plugins.e2m3u2b.mainmenu.addNotifier(update_main_menu, initial_call=False)
-
 
 def Plugins(**kwargs):
     result = [
