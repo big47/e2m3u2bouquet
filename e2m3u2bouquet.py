@@ -1,5 +1,5 @@
 #!/usr/bin/env python2
-#-*- coding:utf-8 -*-
+# -*- coding:utf-8 -*-
 """
 e2m3u2bouquet.e2m3u2bouquet -- Enigma2 IPTV m3u to bouquet parser
 
@@ -13,20 +13,17 @@ from __future__ import print_function
 import sys, os, glob
 
 # Uppend the directory for custom modules at the front of the path.
-try:
-    from Tools.Directories import resolveFilename, SCOPE_PLUGINS
-    ROOT_DIR = resolveFilename(SCOPE_PLUGINS, 'Extensions/E2m3u2bouquet')
-except:
-    ROOT_DIR = os.path.dirname(os.path.realpath(__file__))
+ROOT_DIR = os.path.dirname(os.path.realpath(__file__))
 sys.path.insert(0, os.path.join(ROOT_DIR, 'modules'))
-for wheel in glob.glob(os.path.join(ROOT_DIR, 'modules', '*.whl')): sys.path.insert(0, wheel)
-
+map(lambda x: sys.path.insert(0, x), glob.glob(os.path.join(ROOT_DIR, 'modules', '*.whl')))
 
 import time
 import gzip
 import errno
+import ntplib
 import requests
 import threading
+import ctypes, ctypes.util
 import SocketServer
 import SimpleHTTPServer
 try:
@@ -36,10 +33,11 @@ try:
 except:
     USE_PIL=False
 from slugify import slugify
+from datetime import datetime
 from socket import socket, AF_INET, SOCK_DGRAM
 from collections import OrderedDict
 from requests_file import FileAdapter
-from requests.utils import requote_uri
+from requests.utils import requote_uri, re
 from urllib3.packages.six.moves.urllib.parse import parse_qs, urlparse, quote
 from urllib3.exceptions import InsecureRequestWarning
 # Suppress the SSL warning from urllib3
@@ -56,9 +54,9 @@ except ImportError:
     pass
 
 __all__ = []
-__version__ = '0.9.9.2'
+__version__ = '0.9.9.7'
 __date__ = '2017-06-04'
-__updated__ = '2020-02-16'
+__updated__ = '2020-02-27'
 
 DEBUG = 0
 TESTRUN = 0
@@ -98,6 +96,31 @@ class CLIError(Exception):
     def __unicode__(self):
         return self.msg
 
+def _set_time():
+    """ Get NTP time and set system time
+    """
+    c = ntplib.NTPClient()
+    for host in ['pool.ntp.org', 'time.google.com', 'time.cloudflare.com', 'time.apple.com', 'time.nist.gov']:
+        try:
+            response = c.request(host, version=3, port=123)
+        except Exception as e:
+            pass
+        else:
+            time_tuple = time.localtime(response.tx_time)
+            # http://linux.die.net/man/3/clock_settime
+            CLOCK_REALTIME = 0
+
+            class timespec(ctypes.Structure):
+                _fields_ = [('tv_sec', ctypes.c_long),
+                            ('tv_nsec', ctypes.c_long)]
+
+            librt = ctypes.CDLL(ctypes.util.find_library('rt'))
+            ts = timespec()
+            ts.tv_sec = int( time.mktime(datetime( *time_tuple[:6]).timetuple() ))
+            ts.tv_nsec = time_tuple[6] * 1000000 # Millisecond to nanosecond
+            librt.clock_settime(CLOCK_REALTIME, ctypes.byref(ts))
+            return
+
 def display_welcome():
     print('\n********************************')
     print('Starting Enigma2 IPTV bouquets v{}'.format(__version__))
@@ -132,21 +155,13 @@ def uninstaller():
     try:
         # Bouquets
         print('Removing old IPTV bouquets...')
-        for fname in os.listdir(ENIGMAPATH):
-            if 'userbouquet.e2m3u2b_iptv_' in fname:
-                os.remove(os.path.join(ENIGMAPATH, fname))
-            elif 'bouquets.tv.bak' in fname:
-                os.remove(os.path.join(ENIGMAPATH, fname))
+        map(lambda fname: os.remove(os.path.join(ENIGMAPATH, fname)) if 'userbouquet.e2m3u2b_iptv_' in fname else os.remove(os.path.join(ENIGMAPATH, fname)) if 'bouquets.tv.bak' in fname else None, os.listdir(ENIGMAPATH))
         # Custom Channels and sources
         print('Removing IPTV custom channels...')
         if os.path.isdir(EPGIMPORTPATH):
-            for fname in os.listdir(EPGIMPORTPATH):
-                if 'e2m3u2b_iptv_' in fname:
-                    os.remove(os.path.join(EPGIMPORTPATH, fname))
+            map(lambda fname: os.remove(os.path.join(EPGIMPORTPATH, fname)) if 'e2m3u2b_iptv_' in fname else None, os.listdir(EPGIMPORTPATH))
         if os.path.isdir(CROSSEPGPATH):
-            for fname in os.listdir(CROSSEPGPATH):
-                if 'e2m3u2b_iptv_' in fname:
-                    os.remove(os.path.join(CROSSEPGPATH, fname))
+            map(lambda fname: os.remove(os.path.join(CROSSEPGPATH, fname)) if 'e2m3u2b_iptv_' in fname else None, os.listdir(CROSSEPGPATH))
         # bouquets.tv
         print('Removing IPTV bouquets from bouquets.tv...')
         os.rename(os.path.join(ENIGMAPATH, 'bouquets.tv'), os.path.join(ENIGMAPATH, 'bouquets.tv.bak'))
@@ -167,7 +182,7 @@ def get_selfip():
     try:
         return [(s.connect(('1.1.1.1', 0)), s.getsockname()[0], s.close()) for s in [socket(AF_INET, SOCK_DGRAM)]][0][1]
     except:
-       logger.error('Network is unreachable')
+       Provider._update_status('Network checker', 'Network is unreachable')
        sys.exit()
 
 def web_server():
@@ -196,7 +211,7 @@ def reload_bouquets():
             eDVBDB.getInstance().reloadServicelist()
             eDVBDB.getInstance().reloadBouquets()
         except:
-            r = requests.get('http://{}/web/servicelistreload?mode=2'.format(get_selfip()), timeout=5) # reload Servicelist & Bouquets
+            r = requests.get('http://{}/web/servicelistreload?mode=2'.format(get_selfip()), timeout=5, verify=False) # reload Servicelist & Bouquets
             r.close()
         print('bouquets reloaded...')
 
@@ -224,17 +239,11 @@ def get_parser_args(program_license, program_version_message):
     providergroup = parser.add_argument_group('Provider Based Setup')
     providergroup.add_argument('-n', '--providername', dest='providername', action='store',
                                help='Host IPTV provider name (e.g. FAB/EPIC) (required)')
-    providergroup.add_argument('-u', '--username', dest='username', action='store',
-                               help='Your IPTV username (required)')
-    providergroup.add_argument('-p', '--password', dest='password', action='store',
-                                help='Your IPTV password (required)')
     # Options
-    parser.add_argument('-i', '--iptvtypes', dest='iptvtypes', action='store_true',
-                        help='Treat all stream references as IPTV stream type. (required for some enigma boxes)')
     parser.add_argument('-sttv', '--streamtype_tv', dest='sttv', action='store', type=int,
-                        help='Stream type for TV (e.g. 1, 4097, 5001 or 5002) overrides iptvtypes')
+                        help='Stream type for TV (e.g. 1, 4097, 5001 or 5002)')
     parser.add_argument('-stvod', '--streamtype_vod', dest='stvod', action='store', type=int,
-                        help='Stream type for VOD (e.g. 4097, 5001 or 5002) overrides iptvtypes')
+                        help='Stream type for VOD (e.g. 4097, 5001 or 5002)')
     parser.add_argument('-M', '--multivod', dest='multivod', action='store_true',
                         help='Create multiple VOD bouquets rather single VOD bouquet')
     parser.add_argument('-a', '--allbouquet', dest='allbouquet', action='store_true',
@@ -245,10 +254,6 @@ def get_parser_args(program_license, program_version_message):
                         help='Option path to store picons, if not supplied defaults to /usr/share/enigma2/picon/')
     parser.add_argument('-xs', '--xcludesref', dest='xcludesref', action='store_true',
                         help='Disable service ref overriding from override.xml file')
-    parser.add_argument('-b', '--bouqueturl', dest='bouqueturl', action='store',
-                        help='URL to download providers bouquet - to map custom service references')
-    parser.add_argument('-bd', '--bouquetdownload', dest='bouquetdownload', action='store_true',
-                        help='Download providers bouquet (use default url) - to map custom service references')
     parser.add_argument('-bt', '--bouquettop', dest='bouquettop', action='store_true',
                         help='Place IPTV bouquets at top')
     parser.add_argument('-U', '--uninstall', dest='uninstall', action='store_true',
@@ -267,10 +272,6 @@ class ProviderConfig(object):
         self.settings_level = ''
         self.m3u_url = ''
         self.epg_url = ''
-        self.username = ''
-        self.password = ''
-        self.provider_update_url = ''
-        self.iptv_types = False
         self.streamtype_tv = ''
         self.streamtype_vod = ''
         self.multi_vod = False
@@ -278,10 +279,7 @@ class ProviderConfig(object):
         self.picons = False
         self.icon_path = ''
         self.sref_override = False
-        self.bouquet_url = ''
-        self.bouquet_download = False
         self.bouquet_top = False
-        self.last_provider_update = 0
         # 4097 Gstreamer options (0-no buffering, 1-buffering enabled, 3- http progressive download & buffering enabl )
         self.gstreamer = '0'
         # 5002 ExtEplayer3 options
@@ -307,8 +305,8 @@ class Provider(object):
     def _download_picon_file(self, service, total):
 
         count, x = service
-#        logo_url, title = x['tvg-logo'], slugify(get_service_title(x), separator='', replacements=[['&', 'and'], ['+', 'plus'], ['*', 'star']]) # for bouquet DESCRIPTION as a filename
-        logo_url, title = x['tvg-logo'], slugify(x['serviceRef'], separator='_', lowercase=False).upper() # for bouquet serviceref as a filename
+#        logo_url, title = x['tvg-logo'], slugify(get_service_title(x), separator='', replacements=[['&', 'and'], ['+', 'plus'], ['*', 'star']]) # tvg-logo + SNP
+        logo_url, title = x['tvg-logo'], slugify(x['serviceRef'], separator='_', lowercase=False).upper() # tvg-logo + SNR
 
         # Get the full picon file name with path without ext
         pfile_name = os.path.join(self.config.icon_path, title)
@@ -317,7 +315,7 @@ class Provider(object):
             if DEBUG:
                 print("Picon file doesn't exist downloading\nPiconURL: {}".format(logo_url))
             try:
-                with requests.get(logo_url, headers=REQHEADERS, timeout=(5,30)) as r:
+                with requests.get(logo_url, headers=REQHEADERS, timeout=(5,30), verify=False) as r:
                     r.raise_for_status()
                     im = Image.open(BytesIO(r.content))
                     if im.format is None:
@@ -325,8 +323,7 @@ class Provider(object):
                     im.thumbnail((220, 132))
                     if DEBUG:
                         print('Save picon: {}.{}'.foramt(title, 'png'))
-                    im.save('{}.{}'.format(pfile_name, 'png'), format='PNG')
-
+                    im.convert('RGBA').save('{}.{}'.format(pfile_name, 'png'), format='PNG')
             except Exception, e:
                 if DEBUG:
                     print('Unable to download or convert logo image to PNG\n{}\n'.format(logo_url), repr(e))
@@ -356,19 +353,13 @@ class Provider(object):
     def _set_streamtypes_vodcats(self, service_dict):
         """Set the stream types and VOD categories
         """
-        parsed_stream_url = urlparse(service_dict['stream-url'])
-        ext = os.path.splitext(parsed_stream_url.path)[1]
+        is_vod = re.search('.*\.(3g2|3gp|3gp2|3gpp|3gpp2|asf|asx|avi|bin|dat|drv|\
+                                 f4v|flv|gtp|h264|m4v|mkv|mod|moov|mov|mpeg|mpg|mts|\
+                                 mpv|rm|rmvb|spl|swf|qt|vcd|vid|vob|webm|wm|wmv|yuv)',\
+                           os.path.splitext(urlparse(service_dict['stream-url']).path)[-1], re.I)
 
-        # check for vod streams ending .*.m3u8 e.g. 2345.mp4.m3u8
-        is_m3u8_vod = requests.utils.re.search('\.[^/]+\.m3u8$', parsed_stream_url.path)
-
-        if (parsed_stream_url.path.endswith('ts') or parsed_stream_url.path.endswith('.m3u8')) \
-                or not ext \
-                and not is_m3u8_vod:
-            service_dict['stream-type'] = '4097' if self.config.iptv_types else '1'
-            if self.config.streamtype_tv:
-                # Set custom TV stream type if supplied - this overrides all_iptv_stream_types
-                service_dict['stream-type'] = str(self.config.streamtype_tv)
+        if is_vod is None:
+            service_dict['stream-type'] = str(self.config.streamtype_tv) if self.config.streamtype_tv else '4097'
         else:
             service_dict['category_type'] = 'vod'
             service_dict['group-title'] = 'VOD - {}'.format(service_dict['group-title'])
@@ -395,15 +386,12 @@ class Provider(object):
                     if not type(cat_title_override) is unicode:
                         cat_title_override = cat_title_override.decode('utf-8')
                     dictoption['nameOverride'] = cat_title_override
-                    dictoption['idStart'] = int(node.attrib.get('idStart', '0')) \
-                        if node.attrib.get('idStart', '0').isdigit() else 0
-
+                    dictoption['idStart'] = int(node.attrib.get('idStart', '0')) if node.attrib.get('idStart', '0').isdigit() else 0
                     dictoption['enabled'] = node.attrib.get('enabled', True) == 'true'
                     category_order.append(category)
 
                     # If this category is marked as custom and doesn't exist in self._dictchannels then add
-                    is_custom_category = node.attrib.get('customCategory', False) == 'true'
-                    if is_custom_category:
+                    if node.attrib.get('customCategory', False) == 'true':
                         dictoption['customCategory'] = True
                         if category not in self._dictchannels:
                             self._dictchannels[category] = []
@@ -427,16 +415,16 @@ class Provider(object):
             if cat != 'VOD':
                 if self._dictchannels.get(cat):
                     if self._category_options.get(cat) is None:
-                        dictoption = {'nameOverride': '', 'idStart': 0, 'enabled': True, 'customCategory': False,
-                                      type: 'live'}
-                        self._category_options[cat] = dictoption
+                        # dictoption
+                        self._category_options[cat] = {'nameOverride': '', 'idStart': 0, 'enabled': True,
+                                                       'customCategory': False, type: 'live'}
                     # set category type (live/vod) to same as first stream in cat
                     self._category_options[cat]["type"] = self._dictchannels[cat][0].get("category_type", "live")
             else:
                 if self._category_options.get(cat) is None:
-                    dictoption = {'nameOverride': '', 'idStart': 0, 'enabled': True, 'customCategory': False,
-                                  type: 'vod'}
-                    self._category_options[cat] = dictoption
+                    # dictoption
+                    self._category_options[cat] = {'nameOverride': '', 'idStart': 0, 'enabled': True,
+                                                   'customCategory': False, type: 'vod'}
 
 
     def _parse_map_channels_xml(self):
@@ -527,14 +515,13 @@ class Provider(object):
                                     x['serviceRefOverride'] = True
                                 # streamUrl no longer output to xml file but we still check and process it
                                 x['stream-url'] = override_channel.attrib.get('streamUrl', x['stream-url'])
-                                clear_stream_url = override_channel.attrib.get('clearStreamUrl') == 'true'
-                                if clear_stream_url:
+                                if override_channel.attrib.get('clearStreamUrl') == 'true':
                                     x['stream-url'] = ''
                                 break
                 Provider._update_status(self.config.name, 'Custom overrides applied')
                 print(Status.message)
             except Exception:
-                msg = 'Corrupt override.xml file'
+                msg = 'Corrupt {}-sort-override.xml'.format(slugify(self.config.name))
                 print(msg)
                 if DEBUG:
                     raise msg
@@ -569,8 +556,7 @@ class Provider(object):
             f.write('{}\n'.format(PLACEHOLDER_SERVICE))
 
     def _get_bouquet_index_name(self, cat_filename, provider_filename):
-        return ('#SERVICE 1:7:1:0:0:0:0:0:0:0:FROM BOUQUET "userbouquet.e2m3u2b_iptv_{}_{}.tv" ORDER BY bouquet\n'
-                .format(provider_filename, cat_filename))
+        return ('#SERVICE 1:7:1:0:0:0:0:0:0:0:FROM BOUQUET "userbouquet.e2m3u2b_iptv_{}_{}.tv" ORDER BY bouquet\n'.format(provider_filename, cat_filename))
 
     def _save_bouquet_index_entries(self, iptv_bouquets):
         """Add to the main bouquets.tv file
@@ -611,7 +597,7 @@ class Provider(object):
         bouquet_indexes = []
 
         vod_categories = [cat for cat in self._category_order if self._category_options[cat].get('type', 'live') == 'vod']
-        bouquet_name = '{} All Channels'.format(self.config.name)
+        bouquet_name = 'All Channels'
         cat_filename = slugify(bouquet_name)
         provider_filename = slugify(self.config.name)
 
@@ -623,10 +609,8 @@ class Provider(object):
 
         with open(bouquet_filepath, 'w+') as f:
             f.write('#NAME {} - {}\n'.format(self.config.name, bouquet_name))
-
             # write place holder channels (for channel numbering)
-            for i in xrange(100):
-                f.write('{}\n'.format(PLACEHOLDER_SERVICE))
+            f.writelines(['{}\n'.format(PLACEHOLDER_SERVICE) for i in xrange(100)])
             channel_num = 1
 
             for cat in self._category_order:
@@ -693,39 +677,9 @@ class Provider(object):
         """Generate 32 bit category id to help make service refs unique"""
         return requests.auth.hashlib.md5(self.config.name + cat.encode('utf-8')).hexdigest()[:8]
 
-    def _extract_user_details_from_url(self):
-        """Extract username & password from m3u_url
-           http://user:pass@NetLoc:port/path;parameters?query=argument#fragment
-        """
-        if self.config.m3u_url:
-            parsed = urlparse(self.config.m3u_url)
-            self.config.username = parsed.username if parsed.username else parse_qs(parsed.query).get('username',[''])[0]
-            self.config.password = parsed.password if parsed.password else parse_qs(parsed.query).get('password',[''])[0]
-
     @staticmethod
     def _update_status(name, message):
         Status.message = '\n[{}]: {}'.format(name, message)
-
-    def _process_provider_update(self):
-        """Download provider update file from url"""
-        Provider._update_status(self.config.name, 'Downloading providers update file')
-        print(Status.message)
-        print('provider update url = ', self.config.provider_update_url)
-        try:
-           with requests.get(self.config.provider_update_url, headers=REQHEADERS, stream=True, timeout=(5,30)) as r:
-               for line in r.iter_lines():
-                   if line:
-                       name, m3u, epg = line.encode('utf-8').strip().split(',')
-                       # check we have name and m3u values
-                       if name and m3u:
-                           self.config.name = name
-                           self.config.m3u_url = m3u
-                           self.config.epg_url = epg if epg else self.config.epg_url
-                           self.config.last_provider_update = int(time.time())
-                           return True
-        except:
-            print('[e2m3u2b] _process_provider_update error unable to read providers update file')
-            return False
 
     def process_provider(self):
         Status.is_running = True
@@ -736,26 +690,9 @@ class Provider(object):
         if self.config.name is None:
             self.config.name = "E2m3u2Bouquet"
 
-        # If no username or password supplied extract them from m3u_url
-        if (self.config.username is None) or (self.config.password is None):
-            self._extract_user_details_from_url()
-
-        # Replace USERNAME & PASSWORD placeholders in urls
-        self.config.m3u_url = requote_uri(self.config.m3u_url.replace('USERNAME', self.config.username).replace('PASSWORD', self.config.password))
-        self.config.epg_url = requote_uri(self.config.epg_url.replace('USERNAME', self.config.username).replace('PASSWORD', self.config.password))
-        if self.config.bouquet_download and self.config.bouquet_url:
-            self.config.bouquet_url = requote_uri(self.config.bouquet_url.replace('USERNAME', self.config.username).replace('PASSWORD', self.config.password))
-
-        # get default provider bouquet download url if bouquet download set and no bouquet url given
-        if self.config.bouquet_download and not self.config.bouquet_url:
-            # set bouquet_url to default url
-            pos = self.config.m3u_url.find('get.php')
-            if pos != -1:
-                self.config.bouquet_url = requote_uri(self.config.m3u_url[0:pos+7]+'?username={username}&password={password}&type=dreambox&output=ts'.format(**self.config.__dict__))
-
-        # Download panel bouquet
-        if self.config.bouquet_url:
-            self.download_panel_bouquet()
+        # Requote URL's after user input to prevent the use of invalid characters
+        self.config.m3u_url = requote_uri(self.config.m3u_url)
+        self.config.epg_url = requote_uri(self.config.epg_url)
 
         # Download & parse m3u to _dictchannels
         self.download_m3u()
@@ -781,17 +718,12 @@ class Provider(object):
 
         Status.is_running = False
 
-    def provider_update(self):
-        if self.config.provider_update_url and self.config.username and self.config.password:
-            return self._process_provider_update()
-        return False
-
     def download_epg(self):
         """Get EPG file from link in some cases
         """
         try:
-            fname = self.config.epg_url[self.config.epg_url.rfind("/")+1:]
-            with requests.get(self.config.epg_url, headers=REQHEADERS, timeout=(5,30), stream=True, allow_redirects=True) as epg, \
+            fname = slugify(self.config.name) + '_' + self.config.epg_url[self.config.epg_url.rfind("/")+1:]
+            with requests.get(self.config.epg_url, headers=REQHEADERS, timeout=(5,30), stream=True, allow_redirects=True, verify=False) as epg, \
                 open(os.path.join(CFGPATH, 'epg', fname), 'wb') as f:
                     epg.raise_for_status()
                     for chunk in epg.iter_content(chunk_size=8192):
@@ -818,6 +750,7 @@ class Provider(object):
                                      [' +2', 'plus2'], [' +4', 'plus4'], [' +6', 'plus6'], [' +7', 'plus7'], [' +8', 'plus8'], ['+', 'plus'],
                                     ])
 
+
     def download_m3u(self):
         """Get M3U file and parse it
 
@@ -829,7 +762,7 @@ class Provider(object):
         #EXTGRP:Top10  (optional derective)
         http://167.114.102.27/live/Eem9fNZQ8r_FTl9CXevikA/1461268502/a490ae75a3ec2acf16c9f592e889eb4c.m3u8|User-Agent=Mozilla%2F5.0%20(Windows%20NT%206.1%3B%20WOW64)%20AppleWebKit%2F537.36%20(KHTML%2C%20like%20Gecko)%20Chrome%2F47.0.2526.106%20Safari%2F537.36
         """
-        Provider._update_status(self.config.name, 'Downloading m3u file')
+        Provider._update_status(self.config.name, 'Downloading M3U file')
         print(Status.message)
         if DEBUG:
             print('m3uurl = {}'.format(self.config.m3u_url))
@@ -837,16 +770,65 @@ class Provider(object):
             s = requests.Session()
             s.mount('file://', FileAdapter())
             s.stream = True
+
+            # Local M3U TAGs
+            tag_template = re.compile(r'.*?(url-logo|url-tvg|url-epg|tvg-id|tvg-name|tvg-logo|group-title)=[\'"](.*?)[\'"]')
+            # URL-link validation
+            ip_middle_octet = u"(?:\.(?:1?\d{1,2}|2[0-4]\d|25[0-5]))"
+            ip_last_octet = u"(?:\.(?:[1-9]\d?|1\d\d|2[0-4]\d|25[0-4]))"
+
+            regex = re.compile(
+                               u"^"
+                               # protocol identifier
+                               u"(?:(?:https?|ftp|rtsp|rtp|mmp)://)"
+                               # user:pass authentication
+                               u"(?:\S+(?::\S*)?@)?"
+                               u"(?:"
+                               u"(?P<private_ip>"
+                               # IP address exclusion
+                               # private & local networks
+                               u"(?:(?:10|127)" + ip_middle_octet + u"{2}" + ip_last_octet + u")|"
+                               u"(?:(?:169\.254|192\.168)" + ip_middle_octet + ip_last_octet + u")|"
+                               u"(?:172\.(?:1[6-9]|2\d|3[0-1])" + ip_middle_octet + ip_last_octet + u"))"
+                               u"|"
+                               # IP address dotted notation octets
+                               # excludes loopback network 0.0.0.0
+                               # excludes reserved space >= 224.0.0.0
+                               # excludes network & broadcast addresses
+                               # (first & last IP address of each class)
+                               u"(?P<public_ip>"
+                               u"(?:[1-9]\d?|1\d\d|2[01]\d|22[0-3])"
+                               u"" + ip_middle_octet + u"{2}"
+                               u"" + ip_last_octet + u")"
+                               u"|"
+                               # host name
+                               u"(?:(?:[a-z\u00a1-\uffff0-9]-?)*[a-z\u00a1-\uffff0-9]+)"
+                               # domain name
+                               u"(?:\.(?:[a-z\u00a1-\uffff0-9]-?)*[a-z\u00a1-\uffff0-9]+)*"
+                               # TLD identifier
+                               u"(?:\.(?:[a-z\u00a1-\uffff]{2,}))"
+                               u")"
+                               # port number
+                               u"(?::\d{2,5})?"
+                               # resource path
+                               u"(?:/\S*)?"
+                               # query string
+                               u"(?:\?\S*)?"
+                               u"$",
+                               re.UNICODE | re.IGNORECASE
+                               )
+
+            url_validate = re.compile(regex)
+
             # Get playlist from URL or local m3u M3U ('file:///path/to/file')
-            with s.get(self.config.m3u_url, headers=REQHEADERS, timeout=(5,30)) as r:
+            with s.get(self.config.m3u_url, headers=REQHEADERS, timeout=(5,30), verify=False) as r:
                 r.raise_for_status()
-                Provider._update_status(self.config.name, 'Parsing channels in M3U')
+                Provider._update_status(self.config.name, 'Parsing M3U file')
                 print(Status.message)
-                # Local M3U TAGs
-                tag_pattern = requests.utils.re.compile(r'.*?(tvg-id|tvg-name|tvg-logo|tvg-language|tvg-country|group-title)=[\'"](.*?)[\'"]')
+
                 def service_dict_template():
-                    dict = {}.fromkeys(['url-logo', 'url-tvg', 'url-epg', 'tvg-id', 'tvg-name', 'tvg-logo', 'tvg-language', 'tvg-country',
-                                        'nameOverride', 'categoryOverride', 'serviceRef', ], '')
+                    dict = {}.fromkeys(['url-logo', 'url-tvg', 'url-epg', 'tvg-id', 'tvg-name', 'tvg-logo', 'nameOverride',
+                                        'categoryOverride', 'serviceRef', ], '')
                     dict.update({'group-title': u'NoGroup', 'category_type': 'live', 'has_archive': False, 'enabled': True, 'serviceRefOverride': False, })
                     return dict
 
@@ -857,11 +839,11 @@ class Provider(object):
 
                     if line.startswith('#EXTM3U'):
                         # Global M3U TAGs url-tvg|url-epg|url-logo
-                        service_dict.update({k:v.strip('"') for k,v in [x.split('=') for x in line.split() if '=' in x]})
+                        service_dict.update(dict(tag_template.findall(line)))
                         urllogo = service_dict.get('url-logo', '')
                         if self.config.epg_url == '':
                             self.config.epg_url = service_dict.get('url-tvg', service_dict.get('url-epg', DEFAULTEPG))
-                        if not self.config.epg_url.startswith(('http://', 'https://')) or len(self.config.epg_url.split(','))>1:
+                        if not url_validate.match(self.config.epg_url):
                             self.config.epg_url = DEFAULTEPG
                         if self.config.epg_url.startswith('https://'):
                             self.download_epg()
@@ -874,7 +856,7 @@ class Provider(object):
                         except:
                             extInfData, name = line, None
 
-                        service_dict.update(dict(tag_pattern.findall(extInfData)))
+                        service_dict.update(dict(tag_template.findall(extInfData)))
 
                         if name is None:
                             name = service_dict.get('tvg-name')
@@ -885,8 +867,8 @@ class Provider(object):
                         service_dict.update({'stream-name': name.strip()})
 
                         tvglogo = service_dict.get('tvg-logo')
-                        if tvglogo != '' and not tvglogo.startswith(('http://', 'https://')) and urllogo.startswith(('http://', 'https://')):
-                            service_dict.update({'tvg-logo':'{}{}'.format(logourl, tvglogo)})
+                        if not url_validate.match(tvglogo) and url_validate.match(urllogo):
+                            service_dict.update({'tvg-logo': requests.compat.urljoin(urllogo, tvglogo)})
                         if self.config.epg_url == DEFAULTEPG:
                             service_dict.update({'tvg-id': self.get_tvgid(service_dict.get('stream-name'))})
 
@@ -896,7 +878,8 @@ class Provider(object):
                                 service_dict.update({'group-title': line.split(':')[1].strip()})
                             except:
                                 pass
-                    elif line.startswith(('http', 'https', 'rtsp', 'rtp', 'mmp')) and service_dict.get('stream-name'):
+
+                    elif url_validate.match(line) and service_dict.get('stream-name'):
                         service_dict.update({'stream-url': line.strip()})
                         self._set_streamtypes_vodcats(service_dict)
                         #Set default name for any blank groups and update channels dict
@@ -907,9 +890,10 @@ class Provider(object):
                 print("No extended playlist info found. Check m3u url should be 'type=m3u_plus'")
 
         except Exception, e:
+            print(e)
             if DEBUG:
                 raise e
-            Provider._update_status(self.config.name, 'Unable to download m3u file')
+            Provider._update_status(self.config.name, 'Unable to download M3U file')
             print(Status.message)
 
     def parse_data(self):
@@ -950,7 +934,7 @@ class Provider(object):
 
                     #               SID : TID  : ONID : Namespace"
                     #             {:04x}:{:04x}:{:04x}:{:08x}
-                    service_ref = '{:04x}:{}:{}:{}'.format(num, cat_id[:4], cat_id[4:], NAMESPACE)
+                    service_ref = '{:04x}:{}:{}:{}'.format(num, cat_id[:4].lstrip('0'), cat_id[4:].lstrip('0'), NAMESPACE)
 
                     if not x['stream-name'].startswith('placeholder_'):
                         if self._panel_bouquet and not x.get('serviceRefOverride'):
@@ -1000,38 +984,20 @@ class Provider(object):
 
         # Have a look at what we have
         if DEBUG and TESTRUN:
-            datafile = open(os.path.join(CFGPATH, 'channels.debug'), "w+")
-            for cat in self._category_order:
-                if cat in self._dictchannels:
-                    for line in self._dictchannels[cat]:
-                        linevals = ""
-                        for key, value in line.items():
-                            if type(value) is bool:
-                                linevals += str(value) + ":"
-                            else:
-                                linevals += value.encode("utf-8") + ":"
-                        datafile.write("{}\n".format(linevals))
-            datafile.close()
+            with open(os.path.join(CFGPATH, 'channels.debug'), "w+") as datafile:
+                for cat in self._category_order:
+                    if cat in self._dictchannels:
+                        for line in self._dictchannels[cat]:
+                            linevals = ""
+                            for key, value in line.items():
+                                if type(value) is bool:
+                                    linevals += str(value) + ":"
+                                else:
+                                    linevals += value.encode("utf-8") + ":"
+                            datafile.write("{}\n".format(linevals))
 
         Provider._update_status(self.config.name, 'M3U successfully parsed')
         print(Status.message)
-
-    def download_panel_bouquet(self):
-        """Download panel bouquet file from url
-        """
-        Provider._update_status(self.config.name, 'Downloading providers bouquet file')
-        print(Status.message)
-        if DEBUG:
-            print("bouqueturl = {}".format(self.config.bouquet_url))
-        try:
-            with requests.get(self.config.bouquet_url, headers=REQHEADERS, timeout=(5,30), allow_redirects=True) as r:
-                self._panel_bouquet_file = r.text.encode('utf-8')
-                self._parse_panel_bouquet()
-        except:
-            msg = 'Unable to download providers panel bouquet file'
-            print(msg)
-            if DEBUG:
-                raise msg
 
     def download_picons(self):
         if not USE_PIL:
@@ -1167,8 +1133,7 @@ class Provider(object):
                 else:
                     for group in self._xmltv_sources_list:
                         f.write('{}<group id="{}">\r\n'.format(2 * indent, xml_escape(group)))
-                        for source in self._xmltv_sources_list[group]:
-                            f.write('{}<url>{}</url>\r\n'.format(3 * indent, xml_escape(source)))
+                        f.writelines(['{}<url>{}</url>\r\n'.format(3 * indent, xml_escape(source)) for source in self._xmltv_sources_list[group]])
                         f.write('{}</group>\r\n'.format(2 * indent))
                 f.write('{}</xmltvextrasources>\r\n'.format(indent))
 
@@ -1229,24 +1194,20 @@ class Provider(object):
         print(Status.message)
         # clean old bouquets before writing new
         if self._dictchannels:
-            for fname in os.listdir(ENIGMAPATH):
-                if 'userbouquet.e2m3u2b_iptv_{}'.format(slugify(self.config.name)) in fname:
-                    os.remove(os.path.join(ENIGMAPATH, fname))
+             map(lambda fname: os.remove(os.path.join(ENIGMAPATH, fname)) if 'userbouquet.e2m3u2b_iptv_{}'.format(slugify(self.config.name)) in fname else None, os.listdir(ENIGMAPATH))
         iptv_bouquet_list = []
 
-        if self.config.all_bouquet:
+        # If the option not to create Multi Bouquets is selected,
+        # then create an All bouquet by default and return
+        if not self.config.multi_vod:
             iptv_bouquet_list = self._create_all_channels_bouquet()
-
-        vod_categories = [cat for cat in self._category_order if self._category_options[cat].get('type', 'live') == 'vod']
-        vod_category_output = False
-        vod_bouquet_entry_output = False
-        channel_number_start_offset_output = False
-
+            self._save_bouquet_index_entries(iptv_bouquet_list)
+            return
         # If the playlist does not contain group-title tags we do not create uesrbouquets
         # and forcibly create all channels bouquet, but if some of the playlist entries
         # have a group-title tag, and some are not, then for those who are absent,
         # we assign the default group "NoGroup" in download_m3u()
-        if len(self._category_order)==1 and self._category_order[0]==u'NoGroup':
+        elif len(self._category_order)==1 and self._category_order[0]==u'NoGroup':
             Provider._update_status(self.config.name, 'The list of playlist groups is empty. Create all channels bouquet only!')
             print(Status.message)
             # write the bouquets.tv indexes
@@ -1254,6 +1215,12 @@ class Provider(object):
                 iptv_bouquet_list = self._create_all_channels_bouquet()
             self._save_bouquet_index_entries(iptv_bouquet_list)
             return
+
+        vod_categories = [cat for cat in self._category_order if self._category_options[cat].get('type', 'live') == 'vod']
+        vod_category_output = False
+        vod_bouquet_entry_output = False
+        channel_number_start_offset_output = False
+
 
         for cat in self._category_order:
             if self._category_options[cat].get('type', 'live') == 'live':
@@ -1290,8 +1257,7 @@ class Provider(object):
                         f.write('#NAME {}\n'.format(bouquet_name))
                         if not channel_number_start_offset_output and not self.config.all_bouquet:
                             # write place holder services (for channel numbering)
-                            for i in xrange(100):
-                                f.write('{}\n'.format(PLACEHOLDER_SERVICE))
+                            f.writelines(['{}\n'.format(PLACEHOLDER_SERVICE) for i in xrange(100)])
                             channel_number_start_offset_output = True
                             channel_num += 1
 
@@ -1314,8 +1280,7 @@ class Provider(object):
                         f.write('#NAME {}\n'.format(bouquet_name))
                         if not channel_number_start_offset_output and not self.config.all_bouquet:
                             # write place holder services (for channel numbering)
-                            for i in xrange(100):
-                                f.write('{}\n'.format(PLACEHOLDER_SERVICE))
+                            f.writelines(['{}\n'.format(PLACEHOLDER_SERVICE) for i in xrange(100)])
                             channel_number_start_offset_output = True
                             channel_num += 1
 
@@ -1407,14 +1372,11 @@ class Config(object):
 -->\r
 <config>\r
     <supplier>\r
-        <name>Supplier Name 1</name><!-- Supplier Name -->\r
+        <name>Supplier Name</name><!-- Supplier Name -->\r
         <enabled>1</enabled><!-- Enable or disable the supplier (0 or 1) -->\r
         <m3uurl><![CDATA[http://address.yourprovider.com:80/get.php?username=USERNAME&password=PASSWORD&type=m3u_plus&output=ts]]></m3uurl><!-- Extended M3U url -->\r
         <epgurl><![CDATA[http://address.yourprovider.com:80/xmltv.php?username=USERNAME&password=PASSWORD]]></epgurl><!-- XMLTV EPG url -->\r
-        <username><![CDATA[]]></username><!-- (Optional) will replace USERNAME placeholder in urls -->\r
-        <password><![CDATA[]]></password><!-- (Optional) will replace PASSWORD placeholder in urls -->\r
-        <iptvtypes>0</iptvtypes><!-- Change all streams to IPTV type (0 or 1) -->\r
-        <streamtypetv></streamtypetv><!-- (Optional) Custom TV stream type (e.g. 1, 4097, 5001 or 5002) -->\r
+        <streamtypetv>4097</streamtypetv><!-- (Optional) Custom TV stream type (e.g. 1, 4097, 5001 or 5002) -->\r
         <gstreamer>0</gstreamer><!-- (Optional) Stream type: 0 (no buffering), 1 (buffering enabled) or 3 (progressive download and buffering enabled) -->\r
         <flv2mpeg4>0</flv2mpeg4><!-- (Optional) EXT3_FLV2MPEG4_CONVERTER (0 or 1) -->\r
         <progressive>0</progressive><!-- (Optional) EXT3_PLAYBACK_PROGRESSIVE (0 or 1) -->\r
@@ -1424,24 +1386,19 @@ class Config(object):
         <buffersize>8192</buffersize><!-- (Optional) GST_BUFFER_SIZE buffer size in kilobytes -->\r
         <bufferduration>0</bufferduration><!-- (Optional) GST_BUFFER_DURATION buffer duration in seconds -->\r
         <streamtypevod></streamtypevod><!-- (Optional) Custom VOD stream type (e.g. 4097, 5001 or 5002) -->\r
-        <multivod>0</multivod><!-- Split VOD into seperate categories (0 or 1) -->\r
-        <allbouquet>1</allbouquet><!-- Create all channels bouquet -->\r
+        <multivod>1</multivod><!-- Split bouquets into seperate categories (0 or 1) -->\r
+        <allbouquet>0</allbouquet><!-- Create all channels bouquet as separate bouquet if multivod enabled -->\r
         <picons>0</picons><!-- Automatically download Picons (0 or 1) -->\r
-        <iconpath>/usr/share/enigma2/picon/</iconpath><!-- Location to store picons -->\r
+        <iconpath></iconpath><!-- Location to store picons. Do not fill if using GUI mode -->\r
         <xcludesref>1</xcludesref><!-- Disable service ref overriding from override.xml file (0 or 1) -->\r
-        <bouqueturl><![CDATA[]]></bouqueturl><!-- (Optional) url to download providers bouquet - to map custom service references -->\r
-        <bouquetdownload>0</bouquetdownload><!-- Download providers bouquet (use default url) must have username and password set above - to map custom service references -->\r
         <bouquettop>0</bouquettop><!-- Place IPTV bouquets at top (0 or 1)-->\r
     </supplier>\r
     <supplier>\r
-        <name>Supplier Name</name><!-- Supplier Name -->\r
+        <name>Supplier Name 1</name><!-- Supplier Name -->\r
         <enabled>0</enabled><!-- Enable or disable the supplier (0 or 1) -->\r
         <m3uurl><![CDATA[http://address.yourprovider.com:80/get.php?username=USERNAME&password=PASSWORD&type=m3u_plus&output=ts]]></m3uurl><!-- Extended M3U url -->\r
         <epgurl><![CDATA[http://address.yourprovider.com:80/xmltv.php?username=USERNAME&password=PASSWORD]]></epgurl><!-- XMLTV EPG url -->\r
-        <username><![CDATA[]]></username><!-- (Optional) will replace USERNAME placeholder in urls -->\r
-        <password><![CDATA[]]></password><!-- (Optional) will replace PASSWORD placeholder in urls -->\r
-        <iptvtypes>0</iptvtypes><!-- Change all streams to IPTV type (0 or 1) -->\r
-        <streamtypetv></streamtypetv><!-- (Optional) Custom TV service type (e.g. 1, 4097, 5001 or 5002) -->\r
+        <streamtypetv>4097</streamtypetv><!-- (Optional) Custom TV service type (e.g. 1, 4097, 5001 or 5002) -->\r
         <gstreamer>0</gstreamer><!-- (Optional) Stream type: 0 (no buffering), 1 (buffering enabled) or 3 (progressive download and buffering enabled) -->\r
         <flv2mpeg4>0</flv2mpeg4><!-- (Optional) EXT3_FLV2MPEG4_CONVERTER (0 or 1) -->\r
         <progressive>0</progressive><!-- (Optional) EXT3_PLAYBACK_PROGRESSIVE (0 or 1) -->\r
@@ -1451,13 +1408,12 @@ class Config(object):
         <buffersize>8192</buffersize><!-- (Optional) GST_BUFFER_SIZE buffer size in kilobytes -->\r
         <bufferduration>0</bufferduration><!-- (Optional) GST_BUFFER_DURATION buffer duration in seconds -->\r
         <streamtypevod></streamtypevod><!-- (Optional) Custom VOD service type (e.g. 4097, 5001 or 5002) -->\r
-        <multivod>0</multivod><!-- Split VOD into seperate categories (0 or 1) -->\r
-        <allbouquet>1</allbouquet><!-- Create all channels bouquet -->\r
+        <multivod>1</multivod><!-- Split bouquets into seperate categories (0 or 1) -->\r
+        <allbouquet>0</allbouquet><!-- Create all channels bouquet as separate bouquet if multivod enabled-->\r
         <picons>0</picons><!-- Automatically download Picons (0 or 1) -->\r
-        <iconpath>/usr/share/enigma2/picon/</iconpath><!-- Location to store picons -->\r
+        <iconpath></iconpath><!-- Location to store picons. Do not fill if using GUI mode -->\r
         <xcludesref>1</xcludesref><!-- Disable service ref overriding from override.xml file (0 or 1) -->\r
-        <bouqueturl><![CDATA[]]></bouqueturl><!-- (Optional) url to download providers bouquet - to map custom service references -->\r
-        <bouquetdownload>0</bouquetdownload><!-- Download providers bouquet (use default url) must have username and password set above - to map custom service references -->\r <bouquettop>0</bouquettop><!-- Place IPTV bouquets at top (0 or 1)--> \r
+        <bouquettop>0</bouquettop><!-- Place IPTV bouquets at top (0 or 1)-->\r
     </supplier>\r
 </config>""")
 
@@ -1482,17 +1438,8 @@ class Config(object):
                             provider.m3u_url = '' if child.text is None else child.text.strip()
                         if child.tag == 'epgurl':
                             provider.epg_url = '' if child.text is None else child.text.strip()
-                        if child.tag == 'username':
-                            provider.username = '' if child.text is None else child.text.strip()
-                        if child.tag == 'password':
-                            provider.password = '' if child.text is None else child.text.strip()
-                        if child.tag == 'providerupdate':
-                            provider.provider_update_url = '' if child.text is None else child.text.strip()
-                        if child.tag == 'iptvtypes':
-                            provider.iptv_types = True if child.text == '1' else False
                         if child.tag == 'streamtypetv':
                             provider.streamtype_tv = '' if child.text is None else child.text.strip()
-
                         # 4097 Gstreamer options (0-no buffering, 1-buffering enabled, 3- http progressive download & buffering enabl)
                         if child.tag == 'gstreamer':
                             provider.gstreamer = '0' if child.text is None or child.text not in ('0', '1', '3') else child.text.strip()
@@ -1524,14 +1471,8 @@ class Config(object):
                             provider.icon_path = '' if child.text is None else child.text.strip()
                         if child.tag == 'xcludesref':
                             provider.sref_override = True if child.text == '0' else False
-                        if child.tag == 'bouqueturl':
-                            provider.bouquet_url = '' if child.text is None else child.text.strip()
-                        if child.tag == 'bouquetdownload':
-                            provider.bouquet_download = True if child.text == '1' else False
                         if child.tag == 'bouquettop':
                             provider.bouquet_top = True if child.text == '1' else False
-                        if child.tag == 'lastproviderupdate':
-                            provider.last_provider_update = 0 if child.text is None else child.text.strip()
 
                 if provider.name:
                     self.providers[provider.name] = provider
@@ -1570,11 +1511,7 @@ class Config(object):
                     f.write('{}<settingslevel>{}</settingslevel>\r\n'.format(2 * indent, provider.settings_level))
                     f.write('{}<m3uurl><![CDATA[{}]]></m3uurl><!-- Extended M3U url --> \r\n'.format(2 * indent, provider.m3u_url))
                     f.write('{}<epgurl><![CDATA[{}]]></epgurl><!-- XMLTV EPG url -->\r\n'.format(2 * indent, provider.epg_url))
-                    f.write('{}<username><![CDATA[{}]]></username><!-- (Optional) will replace USERNAME placeholder in urls -->\r\n'.format(2 * indent, provider.username))
-                    f.write('{}<password><![CDATA[{}]]></password><!-- (Optional) will replace PASSWORD placeholder in urls -->\r\n'.format(2 * indent, provider.password))
-                    f.write('{}<providerupdate><![CDATA[{}]]></providerupdate><!-- (Optional) Provider update url -->\r\n'.format(2 * indent, provider.provider_update_url))
-                    f.write('{}<iptvtypes>{}</iptvtypes><!-- Change all TV streams to IPTV type (0 or 1) -->\r\n'.format(2 * indent, '1' if provider.iptv_types else '0'))
-                    f.write('{}<streamtypetv>{}</streamtypetv><!-- (Optional) Custom TV stream type (e.g. 1, 4097, 5001 or 5002 -->\r\n'.format(2 * indent, provider.streamtype_tv))
+                    f.write('{}<streamtypetv>{}</streamtypetv><!-- (Optional) Custom TV stream type (e.g. 1, 4097, 5001 or 5002) -->\r\n'.format(2 * indent, provider.streamtype_tv))
                     f.write('{}<gstreamer>{}</gstreamer><!-- (Optional) Stream type: 0 (no buffering), 1 (buffering enabled) or 3 (progressive download and buffering enabled) -->\r\n'.format(2 * indent, provider.gstreamer))
                     f.write('{}<flv2mpeg4>{}</flv2mpeg4><!-- (Optional) EXT3_FLV2MPEG4_CONVERTER (0 or 1) -->\r\n'.format(2 * indent, provider.flv2mpeg4))
                     f.write('{}<progressive>{}</progressive><!-- (Optional) EXT3_PLAYBACK_PROGRESSIVE (0 or 1) -->\r\n'.format(2 * indent, provider.progressive))
@@ -1583,16 +1520,13 @@ class Config(object):
                     f.write('{}<ringbuffermaxsize>{}</ringbuffermaxsize><!-- (Optional) GST_RING_BUFFER_MAXSIZE ring buffer size in kilobytes -->\r\n'.format(2 * indent, provider.ring_buffer_maxsize))
                     f.write('{}<buffersize>{}</buffersize><!-- (Optional) GST_BUFFER_SIZE buffer size in kilobytes -->\r\n'.format(2 * indent, provider.buffer_size))
                     f.write('{}<bufferduration>{}</bufferduration><!-- (Optional) GST_BUFFER_DURATION buffer duration in seconds -->\r\n'.format(2 * indent, provider.buffer_duration))
-                    f.write('{}<streamtypevod>{}</streamtypevod><!-- (Optional) Custom VOD stream type (e.g. 4097, 5001 or 5002 -->\r\n'.format(2 * indent, provider.streamtype_vod))
-                    f.write('{}<multivod>{}</multivod><!-- Split VOD into seperate categories (0 or 1) -->\r\n'.format(2 * indent, '1' if provider.multi_vod else '0'))
-                    f.write('{}<allbouquet>{}</allbouquet><!-- Create all channels bouquet (0 or 1) -->\r\n'.format(2 * indent, '1' if provider.all_bouquet else '0'))
+                    f.write('{}<streamtypevod>{}</streamtypevod><!-- (Optional) Custom VOD stream type (e.g. 4097, 5001 or 5002) -->\r\n'.format(2 * indent, provider.streamtype_vod))
+                    f.write('{}<multivod>{}</multivod><!-- Split bouquets into seperate categories (0 or 1) -->\r\n'.format(2 * indent, '1' if provider.multi_vod else '0'))
+                    f.write('{}<allbouquet>{}</allbouquet><!-- Create all channels bouquet as separate bouquet if multivod enabled (0 or 1) -->\r\n'.format(2 * indent, '1' if provider.all_bouquet else '0'))
                     f.write('{}<picons>{}</picons><!-- Automatically download Picons (0 or 1) -->\r\n'.format(2 * indent, '1' if provider.picons else '0'))
-                    f.write('{}<iconpath>{}</iconpath><!-- Location to store picons) -->\r\n'.format(2 * indent, provider.icon_path if provider.icon_path else ''))
+                    f.write('{}<iconpath>{}</iconpath><!-- Location to store picons. Do not fill if using GUI mode -->\r\n'.format(2 * indent, provider.icon_path if provider.icon_path else ''))
                     f.write('{}<xcludesref>{}</xcludesref><!-- Disable service ref overriding from override.xml file (0 or 1) -->\r\n'.format(2 * indent, '0' if provider.sref_override else '1'))
-                    f.write('{}<bouqueturl><![CDATA[{}]]></bouqueturl><!-- (Optional) url to download providers bouquet - to map custom service references -->\r\n'.format(2 * indent, provider.bouquet_url))
-                    f.write('{}<bouquetdownload>{}</bouquetdownload><!-- Download providers bouquet (uses default url) must have username and password set above - to map custom service references -->\r\n'.format(2 * indent, '1' if provider.bouquet_download else '0'))
                     f.write('{}<bouquettop>{}</bouquettop><!-- Place IPTV bouquets at top (0 or 1) -->\r\n'.format(2 * indent, '1' if provider.bouquet_top else '0'))
-                    f.write('{}<lastproviderupdate>{}</lastproviderupdate><!-- Internal use -->\r\n'.format(2 * indent, provider.last_provider_update))
                     f.write('{}</supplier>\r\n'.format(indent))
                 f.write('</config>\r\n')
         else:
@@ -1647,18 +1581,13 @@ USAGE
         args_config = ProviderConfig()
         args_config.m3u_url = args.m3uurl
         args_config.epg_url = args.epgurl
-        args_config.iptv_types = args.iptvtypes
         args_config.multi_vod = args.multivod
         args_config.all_bouquet = args.allbouquet
-        args_config.bouquet_url = args.bouqueturl
-        args_config.bouquet_download = args.bouquetdownload
         args_config.picons = args.picons
         args_config.icon_path = args.iconpath
         args_config.sref_override = not args.xcludesref
         args_config.bouquet_top = args.bouquettop
         args_config.name = args.providername
-        args_config.username = args.username
-        args_config.password = args.password
         args_config.streamtype_tv = args.sttv
         args_config.streamtype_vod = args.stvod
 
@@ -1677,7 +1606,6 @@ USAGE
             e2m3u2b_config = Config()
             if os.path.isfile(os.path.join(CFGPATH, 'config.xml')):
                 e2m3u2b_config.read_config(os.path.join(CFGPATH, 'config.xml'))
-                providers_updated = False
 
                 for key, provider_config in e2m3u2b_config.providers.iteritems():
                     if provider_config.enabled:
@@ -1689,16 +1617,9 @@ USAGE
                             print('Config based setup - {}'.format(provider_config.name))
                             print('********************************\n')
                             provider = Provider(provider_config)
-
-                            if int(time.time()) - int(provider.config.last_provider_update) > 21600:
-                                # wait at least 6 hours (21600s) between update checks
-                                providers_updated = provider.provider_update()
                             provider.process_provider()
                     else:
                         print('\nProvider: {} is disabled - skipping.........\n'.format(provider_config.name))
-
-                if providers_updated:
-                    e2m3u2b_config.write_config()
 
                 reload_bouquets()
                 display_end_msg()
@@ -1724,6 +1645,7 @@ USAGE
 
 if __name__ == "__main__":
     try:
+        _set_time()
         web_server()
     except: pass
     if TESTRUN:

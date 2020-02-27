@@ -285,8 +285,8 @@ msgid "Choose level of settings. Expert shows all options"
 msgstr "Выберіть режим налаштувань. В expert доступні всі налаштування"
 
 #: providers.py:232
-msgid "Providers M3U url. If it contains USERNAME & PASSWORD templates,\nthey will be replaced by values below"
-msgstr "Посилання на M3U провайдера. Якщо слова-шаблони USERNAME & PASSWORD\nприсутні в посиланні вони будуть автоматично замінені на задані нижче"
+msgid "Provider playlist M3U url-link or file"
+msgstr "Посилання на M3U плейлист провайдера або файл"
 
 #: providers.py:233
 msgid "Used EPG:"
@@ -300,29 +300,13 @@ msgstr "Якщо ви оберете default, то буде використов
 msgid "url link to EPG issued by provider. Leave blank if the m3u playlist has url-tvg or url-epg tags"
 msgstr "Посилання на EPG провайдера. Залиште порожнім якщо в m3u плейлисті є теги url-epg або url-tvg"
 
-#: providers.py:236
-msgid "Username"
-msgstr "Им'я користувача"
-
-#: providers.py:236
-msgid "If set will replace USERNAME placeholder in urls"
-msgstr "Якщо задано, то заменить шаблон USERNAME в URL"
-
-#: providers.py:237
-msgid "Password"
-msgstr "Пароль"
-
-#: providers.py:237
-msgid "If set will replace PASSWORD placeholder in urls"
-msgstr "Якщо задано, то замінить шаблон PASSWORD в URL"
-
 #: providers.py:238
-msgid "Multi VOD"
+msgid "Multi Bouquets"
 msgstr ""
 
 #: providers.py:238
-msgid "Enable to create multiple VOD bouquets rather than single VOD bouquet"
-msgstr "Дозволяє створювати декілька букетів VOD замість одного букету VOD"
+msgid "Enable to create multiple bouquets rather than single All bouquet"
+msgstr "Дозволити створювати декілька букетів по категоріям замість одного загального"
 
 #: providers.py:239
 msgid "Picons"
@@ -345,22 +329,8 @@ msgid "Create all channels bouquet:"
 msgstr "Створити All Channels букет:"
 
 #: providers.py:241
-msgid "Create a bouquet containing all channels"
-msgstr "Створити букет що включає всі канали з усіх груп"
-
-#: providers.py:243
-msgid "All IPTV type:"
-msgstr ""
-
-#: providers.py:243
-msgid ""
-"Normally should be left disabled. Setting to enabled may allow recording on "
-"some boxes.\nIf you playback issues (e.g. stuttering on channels) set back to "
-"disabled"
-msgstr ""
-"Зазвичай має бути виключено. Активація може ініціювати запис на"
-"деяких ресиверах.\nЯкщо у Вас проблеми з с відтворенням -"
-"виключіть"
+msgid "Create a separate bouquet containing all channels"
+msgstr "Створити окремий букет що включає всі канали з усіх груп загальним списком"
 
 #: providers.py:244
 msgid "Live Player Type:"
@@ -389,14 +359,6 @@ msgid ""
 msgstr ""
 "Має бути виключено якщо ви не користуєтесь override.xml для перевизначення srvice refs\n"
 "(для DVB - IPTV EPG перевизначення і т.д.)"
-
-#: providers.py:247
-msgid "Check providers bouquet:"
-msgstr "Перевірити букети провайдера:"
-
-#: providers.py:247
-msgid "Enable this option to check and use providers custom service refs"
-msgstr "Включіть цю опцію для перевірки і викорисіання service refs користувача провайдерів"
 
 #: providers.py:263
 msgid "Please enter"                                                                                                                                         

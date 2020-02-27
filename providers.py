@@ -92,9 +92,11 @@ class E2m3u2b_Providers(Screen):
         provider_name = self['list'].getCurrent()[1]
         self.session.openWithCallback(self.provider_config_callback, E2m3u2b_Providers_Config, self.e2m3u2b_config, self.e2m3u2b_config.providers[provider_name])
 
-    def buildListEntry(self, provider):
+    def buildListEntry(self, provider, info=''):
         pixmap = LoadPixmap(cached=True, path=resolveFilename(SCOPE_PLUGINS, 'Extensions/E2m3u2bouquet/images/lock_%s.png' % ('on' if provider.enabled else 'off')))
-        return (pixmap, str(provider.name), '')
+        if not pixmap:
+            pixmap = LoadPixmap(cached=True, path=resolveFilename(SCOPE_PLUGINS, 'Extensions/E2m3u2bouquet/images/') + 'blank.png')
+        return (pixmap, str(provider.name), info)
 
     def refresh(self):
         self['list'].setList([self.buildListEntry(provider) for key, provider in self.e2m3u2b_config.providers.iteritems()])
@@ -189,11 +191,7 @@ class E2m3u2b_Providers_Config(ConfigListScreen, Screen):
             self.provider_epg_url = e2m3u2bouquet.DEFAULTEPG
         self.provider_epg_url = ConfigText(default='', fixed_size=False, visible_width=20)
         self.provider_epg_url.value = self.provider.epg_url
-        self.provider_username = ConfigText(default='', fixed_size=False)
-        self.provider_username.value = self.provider.username
-        self.provider_password = ConfigPassword(default='', fixed_size=False)
-        self.provider_password.value = self.provider.password
-        self.provider_multi_vod = ConfigOnOff(default=False)
+        self.provider_multi_vod = ConfigYesNo(default=True)
         self.provider_multi_vod.value = self.provider.multi_vod
         self.provider_picons = ConfigYesNo(default=False)
         self.provider_picons.value = self.provider.picons
@@ -202,8 +200,6 @@ class E2m3u2b_Providers_Config(ConfigListScreen, Screen):
             self.provider_bouquet_pos.value = _('top')
         self.provider_all_bouquet = ConfigYesNo(default=True)
         self.provider_all_bouquet.value = self.provider.all_bouquet
-        self.provider_iptv_types = ConfigOnOff(default=False)
-        self.provider_iptv_types.value = self.provider.iptv_types
         self.provider_streamtype_tv = ConfigSelection(default='4097', choices=available_players)
         self.provider_streamtype_tv.value = self.provider.streamtype_tv
         # 4097 Gstreamer options (0-no buffering, 1-buffering enabled, 3-http progressive download & buffering enabl)
@@ -230,8 +226,6 @@ class E2m3u2b_Providers_Config(ConfigListScreen, Screen):
         self.provider_streamtype_vod.value = self.provider.streamtype_vod
         self.provider_sref_override = ConfigOnOff(default=False)
         self.provider_sref_override.value = self.provider.sref_override
-        self.provider_bouquet_download = ConfigOnOff(default=False)
-        self.provider_bouquet_download.value = self.provider.bouquet_download
 
         self.create_setup()
         self['pleasewait'].hide()
@@ -248,19 +242,16 @@ class E2m3u2b_Providers_Config(ConfigListScreen, Screen):
             self.list.append(getConfigListEntry("%s:" % _("Enabled"), self.provider_enabled, _("Enable provider %s") % self.provider.name))
             if self.provider_enabled.value:
                 self.list.append(getConfigListEntry("%s:" % _("Setup mode"), self.provider_settings_level, _("Choose level of settings. Expert shows all options")))
-                self.list.append(getConfigListEntry("%s:" % _("M3U url"), self.provider_m3u_url, _("Providers M3U url. If it contains USERNAME & PASSWORD templates,\nthey will be replaced by values below")))
-                if 'USERNAME' and 'PASSWORD' in self.provider_m3u_url.value:
-                    self.list.append(getConfigListEntry(indent + "%s:" % _("Username"), self.provider_username, _("If set will replace USERNAME placeholder in urls")))
-                    self.list.append(getConfigListEntry(indent + "%s:" % _("Password"), self.provider_password, _("If set will replace PASSWORD placeholder in urls")))
+                self.list.append(getConfigListEntry("%s:" % _("M3U url"), self.provider_m3u_url, _("Provider playlist M3U url-link or file")))
                 self.list.append(getConfigListEntry(_("Used EPG:"), self.provider_used_epg, _("If selected default, the plugin will use a predefined EPG by r.rusya")))
                 if self.provider_used_epg.value == _('custom'):
                     self.list.append(getConfigListEntry(indent + "%s:" % _("EPG url"), self.provider_epg_url, _("url link to EPG issued by provider. Leave blank if the m3u playlist has url-tvg or url-epg tags")))
-                self.list.append(getConfigListEntry("%s:" % _("Multi VOD"), self.provider_multi_vod, _("Enable to create multiple VOD bouquets rather than single VOD bouquet")))
                 self.list.append(getConfigListEntry("%s:" % _("Picons"), self.provider_picons, _("Automatically download Picons")))
+                self.list.append(getConfigListEntry("%s:" % _("Multi Bouquets"), self.provider_multi_vod, _("Enable to create multiple bouquets rather than single All bouquet")))
+                if self.provider_multi_vod.value:
+                    self.list.append(getConfigListEntry(indent + _("Create all channels bouquet:"), self.provider_all_bouquet, _("Create a separate bouquet containing all channels")))
                 self.list.append(getConfigListEntry(_("IPTV bouquet position:"), self.provider_bouquet_pos, _("Select where to place IPTV bouquets")))
-                self.list.append(getConfigListEntry(_("Create all channels bouquet:"), self.provider_all_bouquet, _("Create a bouquet containing all channels")))
                 if self.provider_settings_level.value == _('expert'):
-                    self.list.append(getConfigListEntry(_("All IPTV type:"), self.provider_iptv_types, _("Normally should be left disabled. Setting to enabled may allow recording on some boxes.\nIf you playback issues (e.g. stuttering on channels) set back to disabled")))
                     self.list.append(getConfigListEntry(_("Live Player Type:"), self.provider_streamtype_tv, _("Stream player type for TV services")))
 
                     if self.provider_streamtype_tv.value == '4097':
@@ -279,7 +270,6 @@ class E2m3u2b_Providers_Config(ConfigListScreen, Screen):
 
                     self.list.append(getConfigListEntry(_("VOD Player Type:"), self.provider_streamtype_vod, _("Stream player type for VOD services")))
                     self.list.append(getConfigListEntry(_("Override service refs:"), self.provider_sref_override, _("Should be left disabled unless you need to use the override.xml to override service refs\n(e.g. for DVB to IPTV EPG mapping)")))
-                    self.list.append(getConfigListEntry(_("Check providers bouquet:"), self.provider_bouquet_download, _("Enable this option to check and use providers custom service refs")))
 
         self['config'].list = self.list
         self['config'].setList(self.list)
@@ -319,8 +309,6 @@ class E2m3u2b_Providers_Config(ConfigListScreen, Screen):
            self.provider.epg_url = e2m3u2bouquet.DEFAULTEPG
         else:
            self.provider.epg_url = self.provider_epg_url.value
-        self.provider.username = self.provider_username.value
-        self.provider.password = self.provider_password.value
         self.provider.multi_vod = self.provider_multi_vod.value
         self.provider.picons = self.provider_picons.value
         if self.provider_bouquet_pos.value == _('top'):
@@ -328,7 +316,6 @@ class E2m3u2b_Providers_Config(ConfigListScreen, Screen):
         else:
             self.provider.bouquet_top = False
         self.provider.all_bouquet = self.provider_all_bouquet.value
-        self.provider.iptv_types = self.provider_iptv_types.value
         self.provider.streamtype_tv = self.provider_streamtype_tv.value.strip()
         # 4097 Gstreamer options
         self.provider.gstreamer = self.provider_gstreamer.value
@@ -344,7 +331,6 @@ class E2m3u2b_Providers_Config(ConfigListScreen, Screen):
 
         self.provider.streamtype_vod = self.provider_streamtype_vod.value.strip()
         self.provider.sref_override = self.provider_sref_override.value
-        self.provider.bouquet_download = self.provider_bouquet_download.value
 
         # disable provider if no m3u url
         if not self.provider_m3u_url.value:

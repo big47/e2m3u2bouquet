@@ -283,8 +283,8 @@ msgid "Choose level of settings. Expert shows all options"
 msgstr "Wählen Sie die Ebene der Einstellungen. Experte zeigt alle Optionen"
 
 #: providers.py:235
-msgid "Providers M3U url. If it contains USERNAME & PASSWORD templates,\nthey will be replaced by values below"
-msgstr "Providers M3U URL. Wenn die Vorlagenwörter USERNAME & PASSWORD\nim Link vorhanden sind, werden sie automatisch durch die unten eingegebenen ersetzt"
+msgid "Provider playlist M3U url-link or file"
+msgstr "Provider-Wiedergabeliste M3U-URL-Link oder -Datei"
 
 #: providers.py:236
 msgid "Used EPG:"
@@ -298,29 +298,13 @@ msgstr "Bei Auswahl der Standardeinstellung verwendet das Plugin einen vordefini
 msgid "url link to EPG issued by provider. Leave blank if the m3u playlist has url-tvg or url-epg tags"
 msgstr "url link zum EPG des Anbieters. Leer lassen, wenn die m3u-Wiedergabeliste URL-TVG- oder URL-EPG-Tags enthält"
 
-#: providers.py:239
-msgid "Username"
-msgstr "Benutzername"
-
-#: providers.py:239
-msgid "If set will replace USERNAME placeholder in urls"
-msgstr "Wenn gesetzt, wird der Platzhalter USERNAME in den URLs ersetzt"
-
-#: providers.py:240
-msgid "Password"
-msgstr "Passwort"
-
-#: providers.py:240
-msgid "If set will replace PASSWORD placeholder in urls"
-msgstr "Wenn gesetzt, wird der PASSWORD-Platzhalter in den URLs ersetzt"
+#: providers.py:241
+msgid "Multi Bouquets"
+msgstr ""
 
 #: providers.py:241
-msgid "Multi VOD"
-msgstr "Multi VOD"
-
-#: providers.py:241
-msgid "Enable to create multiple VOD bouquets rather than single VOD bouquet"
-msgstr "Aktivieren Sie diese Option, um mehrere VoD-Bouquets anstelle eines einzelnen VoD-Bouquets zu erstellen"
+msgid "Enable to create multiple bouquets rather than single All bouquet"
+msgstr "Aktivieren Sie diese Option, um mehrere Bouquets anstelle eines einzelnen Bouquet zu erstellen"
 
 #: providers.py:242
 msgid "Picons"
@@ -343,20 +327,8 @@ msgid "Create all channels bouquet:"
 msgstr "Erstellen Sie  Bouquet für alle Kanäle:"
 
 #: providers.py:244
-msgid "Create a bouquet containing all channels"
+msgid "Create a separate bouquet containing all channels"
 msgstr "Erstellen Sie ein Bouquet mit allen Kanälen"
-
-#: providers.py:246
-msgid "All IPTV type:"
-msgstr "Alle IPTV-Typen:"
-
-#: providers.py:246
-msgid ""
-"Normally should be left disabled. Setting to enabled may allow recording on some boxes.\nIf you playback issues (e.g. stuttering on channels) set back to"
-"disabled"
-msgstr ""
-"Normalerweise sollte deaktiviert bleiben. Die Einstellung \"Aktiviert\" ermöglicht möglicherweise die Aufnahme\nin einigen Boxen. Wenn Sie Probleme bei"
-"der Wiedergabe haben (z. B. Stottern auf Kanälen), setzen Sie die Funktion zurück auf deaktiviert"
 
 #: providers.py:247
 msgid "TV Stream Type:"
@@ -383,14 +355,6 @@ msgid "Should be left disabled unless you need to use the override.xml to overri
 msgstr ""
 "Sollte deaktiviert bleiben, es sei denn, Sie müssen die Datei override.xml verwenden, um Dienstreferenzen zu überschreiben\n"
 "(z. B. für die Zuordnung von DVB zu IPTV-EPG)."
-
-#: providers.py:250
-msgid "Check providers bouquet:"
-msgstr "Überprüfen Sie Anbieter Bouquets:"
-
-#: providers.py:250
-msgid "Enable this option to check and use providers custom service refs"
-msgstr "Aktivieren Sie diese Option, um die benutzerdefinierten Dienstreferenzen der Anbieter zu überprüfen und zu verwenden"
 
 #: providers.py:263
 msgid "Please enter"

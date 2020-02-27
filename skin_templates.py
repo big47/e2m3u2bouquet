@@ -9,7 +9,7 @@
 
 from enigma import getDesktop
 from Tools.Directories import resolveFilename, SCOPE_PLUGINS
-
+from collections import OrderedDict
 # values common to all templates
 fontSize = 20
 menuFontSize = fontSize + 2
@@ -33,7 +33,7 @@ widgetWidth = windowWidth - (marginLeft * 2)
 # These button colours have been selected specially so anti-aliasing around the button
 # text will be done to the correct shade. This is necessary even though the button text
 # widget is transparent, to avoid a black halo around the button text.
-colours = {"red": 0x9f1313, "green": 0x1f771f, "yellow": 0xa08500, "blue": 0x18188b}
+colours = OrderedDict([('red', 0x9f1313), ('green', 0x1f771f), ('yellow', 0xa08500), ('blue', 0x18188b)])
 
 def insertValues(xml, values):
 	# The skin template is designed for a HD screen so the scaling factor is 720.
@@ -52,10 +52,8 @@ def buttonBar():
 	buttonFontSize = fontSize + 1
 	buttonBarElevation = buttonHeight + buttonMarginBottom
         buttonPath = resolveFilename(SCOPE_PLUGINS, 'Extensions/E2m3u2bouquet/images/')
-        buttonBarXML = ''.join(['\n\t<widget name="key_' + c + '" conditional="key_' + c + '" position="%d,e-%d" size="%d,%d" valign="center" halign="center" font="Regular;%d" backgroundColor="#' + "%x" % colours[c] + '" foregroundColor="#ffffff" transparent="1" zPosition="+2"/>\n\t<ePixmap name="' + c + '" conditional="key_' + c + '" position="%d,e-%d" size="%d,%d" pixmap="' + buttonPath + 'key_' + c + '.png" transparent="1" zPosition="+1" alphatest="on" scale="1"/>' for c in ("red","green","yellow","blue")])
-	buttonBarValues = []
-	for x in range(4):
-	    buttonBarValues += [buttonMargin + ((buttonWidth + buttonMargin) * x), buttonBarElevation, buttonWidth, buttonHeight, buttonFontSize, buttonMargin + ((buttonWidth + buttonMargin) * x), buttonBarElevation, buttonWidth, buttonHeight]
+        buttonBarXML = ''.join(['\n\t<widget name="key_' + c + '" conditional="key_' + c + '" position="%d,e-%d" size="%d,%d" valign="center" halign="center" font="Regular;%d" backgroundColor="#' + "%x" % colours[c] + '" foregroundColor="#ffffff" transparent="1" zPosition="+2"/>\n\t<ePixmap name="' + c + '" conditional="key_' + c + '" position="%d,e-%d" size="%d,%d" pixmap="' + buttonPath + 'key_' + c + '.png" transparent="1" zPosition="+1" alphatest="blend" scale="1"/>' for c in colours.keys()])
+	buttonBarValues = [ y for x in range(4) for y in [buttonMargin + ((buttonWidth + buttonMargin) * x), buttonBarElevation, buttonWidth, buttonHeight, buttonFontSize, buttonMargin + ((buttonWidth + buttonMargin) * x), buttonBarElevation, buttonWidth, buttonHeight]]
 	return insertValues(buttonBarXML, buttonBarValues)
 
 def templateOne():
@@ -65,9 +63,9 @@ def templateOne():
 	<widget source="list" render="Listbox" position="%d,%d" size="%d,%d" scrollbarMode="showOnDemand">
 		<convert type="TemplatedMultiContent">
 			{"template": [
-				MultiContentEntryPixmapAlphaTest(pos = (%d, %d), size = (%d, %d), flags = BT_SCALE, png = 0),
-				MultiContentEntryText(pos = (%d, %d), size = (%d, %d), font=0, flags = RT_HALIGN_LEFT|RT_VALIGN_TOP, text = 1),
-				MultiContentEntryText(pos = (%d, %d), size = (%d, %d), font=0, flags = RT_HALIGN_RIGHT|RT_VALIGN_TOP, text = 2),
+				MultiContentEntryPixmapAlphaTest(pos=(%d, %d), size=(%d, %d), png=0),
+				MultiContentEntryText(pos=(%d, %d), size=(%d, %d), font=0, flags=RT_HALIGN_LEFT|RT_VALIGN_CENTER, text=1),
+                                MultiContentEntryText(pos=(%d, %d), size=(%d, %d), font=0, flags=RT_HALIGN_RIGHT|RT_VALIGN_CENTER, text=2),
 				],
 				"fonts": [gFont("Regular", %d)],
 				"itemHeight": %d
@@ -78,10 +76,11 @@ def templateOne():
 		marginLeft, marginTop, widgetWidth, templateOneHeight, # templateOneXML line 1
 		2, 1,  25,  24, # templateOneXML line 4
 		35,  2,  300, configItemHeight-2, # templateOneXML line 5
-		350, 2,  210, configItemHeight-2, # templateOneXML line 6
+                350, 2,  210, configItemHeight-2, # templateOneXML line 6
 		fontSize,
 		configItemHeight
 	]
+
 	return insertValues(templateOneXML, templateOneValues)
 
 def templateTwo():
@@ -91,14 +90,15 @@ def templateTwo():
 	<widget source="list" render="Listbox" position="%d,%d" size="%d,%d" scrollbarMode="showOnDemand">
 		<convert type="TemplatedMultiContent">
 			{"template": [
-				MultiContentEntryPixmapAlphaTest(pos = (%d, %d), size = (%d, %d), flags = BT_SCALE, png = 0),
-				MultiContentEntryText(pos = (%d, %d), size = (%d, %d), font=0, flags = RT_HALIGN_LEFT|RT_VALIGN_TOP, text = 1),
+				MultiContentEntryPixmapAlphaTest(pos=(%d, %d), size=(%d, %d), png=0),
+				MultiContentEntryText(pos=(%d, %d), size=(%d, %d), font=0, flags=RT_HALIGN_LEFT|RT_VALIGN_CENTER, text=1),
 				],
 				"fonts": [gFont("Regular", %d)],
 				"itemHeight": %d
 			}
 		</convert>
 	</widget>"""
+
 	templateTwoValues = [
 		marginLeft, marginTop, widgetWidth, templateTwoWidgetHeight, # templateTwoXML line 1
 		2, 4,  32,  32, # templateTwoXML line 4
@@ -128,7 +128,7 @@ def templateFour():
 	<widget source="list" render="Listbox" position="%d,%d" size="%d,%d" scrollbarMode="showOnDemand">
 		<convert type="TemplatedMultiContent">
 			{"template": [
-				MultiContentEntryText(pos = (%d, %d), size = (%d, %d), font=0, flags = RT_HALIGN_LEFT|RT_VALIGN_TOP, text = 0),
+				MultiContentEntryText(pos=(%d, %d), size=(%d, %d), font=0, flags=RT_HALIGN_LEFT|RT_VALIGN_CENTER, text=0),
 				],
 				"fonts": [gFont("Regular", %d)],
 				"itemHeight": %d
@@ -149,7 +149,7 @@ def templateFive():
 	# template five is for log
 	templateFiveXML = '\n\t<widget name="list" position="%d,%d" size="%d,%d" itemHeight="%d" font="Regular;%d" scrollbarMode="showOnDemand"/>'
 	templateFiveValues = [
-		marginLeft, marginTop, widgetWidth, configItemHeight*configListLength, configItemHeight, fontSize # templateFiveXML line 1
+		marginLeft, marginTop, widgetWidth, configItemHeight*configListLength, configItemHeight, fontSize-2 # templateFiveXML line 1
 	]
 	return insertValues(templateFiveXML, templateFiveValues)
 

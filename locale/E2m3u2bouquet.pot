@@ -328,25 +328,7 @@ msgid "M3U url"
 msgstr ""
 
 #: providers.py:254
-msgid ""
-"Providers M3U url. If it contains USERNAME & PASSWORD templates,\n"
-"they will be replaced by values below"
-msgstr ""
-
-#: providers.py:256
-msgid "Username"
-msgstr ""
-
-#: providers.py:256
-msgid "If set will replace USERNAME placeholder in urls"
-msgstr ""
-
-#: providers.py:257
-msgid "Password"
-msgstr ""
-
-#: providers.py:257
-msgid "If set will replace PASSWORD placeholder in urls"
+msgid "Provider playlist M3U url-link or file"
 msgstr ""
 
 #: providers.py:258
@@ -368,11 +350,11 @@ msgid ""
 msgstr ""
 
 #: providers.py:261
-msgid "Multi VOD"
+msgid "Multi Bouquets"
 msgstr ""
 
 #: providers.py:261
-msgid "Enable to create multiple VOD bouquets rather than single VOD bouquet"
+msgid "Enable to create multiple bouquets rather than single All bouquet"
 msgstr ""
 
 #: providers.py:262
@@ -396,18 +378,7 @@ msgid "Create all channels bouquet:"
 msgstr ""
 
 #: providers.py:264
-msgid "Create a bouquet containing all channels"
-msgstr ""
-
-#: providers.py:266
-msgid "All IPTV type:"
-msgstr ""
-
-#: providers.py:266
-msgid ""
-"Normally should be left disabled. Setting to enabled may allow recording on "
-"some boxes.\n"
-"If you playback issues (e.g. stuttering on channels) set back to disabled"
+msgid "Create a separate bouquet containing all channels"
 msgstr ""
 
 #: providers.py:267
@@ -503,14 +474,6 @@ msgid ""
 "Should be left disabled unless you need to use the override.xml to override "
 "service refs\n"
 "(e.g. for DVB to IPTV EPG mapping)"
-msgstr ""
-
-#: providers.py:285
-msgid "Check providers bouquet:"
-msgstr ""
-
-#: providers.py:285
-msgid "Enable this option to check and use providers custom service refs"
 msgstr ""
 
 #: providers.py:309

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# for localized messages
+#for localized messages
 from . import _
 
 import os
@@ -39,7 +39,7 @@ class E2m3u2b_Menu(Screen):
     def __init__(self, session):
 
         Screen.__init__(self, session)
-        Screen.setTitle(self, "IPTV Bouquet Maker - Pepsik edition")
+        Screen.setTitle(self, "IPTV Bouquet Maker - Dorik edition")
         self.skinName = 'AutoBouquetsMaker_Menu'
 
         self.onChangedEntry = []
@@ -76,7 +76,7 @@ class E2m3u2b_Menu(Screen):
         pixmap = LoadPixmap(cached=True, path=resolveFilename(SCOPE_PLUGINS, 'Extensions/E2m3u2bouquet/images/') + image)
         if not pixmap:
             pixmap = LoadPixmap(cached=True, path=resolveFilename(SCOPE_PLUGINS, 'Extensions/E2m3u2bouquet/images/') + 'blank.png')
-        return((pixmap, description))
+        return(pixmap, description)
 
     def openSelected(self):
         {
@@ -192,11 +192,10 @@ class E2m3u2b_Config(ConfigListScreen, Screen):
             pass
 
     def keySave(self):
-        self.saveAll()
-        self.close()
-
-    def saveAll(self):
         map(lambda x: x[1].save(), self["config"].list)
+        config.plugins.e2m3u2b.cfglevel.value = '2'
+        config.plugins.e2m3u2b.cfglevel.save()
+        self.close()
 
     def cancelConfirm(self, result):
         if not result:

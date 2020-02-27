@@ -5,9 +5,8 @@ Latest release can be downloaded from [releases](https://github.com/su1s/e2m3u2b
 ## Usage
 ```
 usage: e2m3u2bouquet.py [-h] [-m M3UURL] [-e EPGURL] [-n PROVIDERNAME]
-                        [-u USERNAME] [-p PASSWORD] [-i] [-sttv STTV]
-                        [-stvod STVOD] [-M] [-a] [-P] [-q ICONPATH] [-xs]
-                        [-b BOUQUETURL] [-bd] [-bt] [-U] [-V]
+                        [-sttv STTV] [-stvod STVOD] [-M] [-a] [-P]
+                        [-q ICONPATH] [-xs] [-bt] [-U] [-V]
 
 e2m3u2bouquet.e2m3u2bouquet -- Enigma2 IPTV m3u to bouquet parser
 
@@ -21,8 +20,6 @@ USAGE
 
 optional arguments:
   -h, --help            show this help message and exit
-  -i, --iptvtypes       Treat all stream references as IPTV stream type.
-                        (required for some enigma boxes)
   -sttv STTV, --streamtype_tv STTV
                         Stream type for TV (e.g. 1, 4097, 5001 or 5002)
                         overrides iptvtypes
@@ -38,12 +35,6 @@ optional arguments:
                         Option path to store picons, if not supplied defaults
                         to /usr/share/enigma2/picon/
   -xs, --xcludesref     Disable service ref overriding from override.xml file
-  -b BOUQUET_URL, --bouqueturl BOUQUET_URL
-                        URL to download providers bouquet - to map custom
-                        service references
-  -bd, --bouquetdownload
-                        Download providers bouquet (use default url) - to map
-                        custom service references
   -bt, --bouquettop     Place IPTV bouquets at top
   -U, --uninstall       Uninstall all changes made by this script
   -V, --version         show program's version number and exit
