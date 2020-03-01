@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-#for localized messages
+# -*- coding: utf-8 -*- for localized messages
 from . import _
 
 import os
@@ -162,18 +161,19 @@ class E2m3u2b_Config(ConfigListScreen, Screen):
     def createSetup(self):
         self.editListEntry = None
         self.list = []
-        indent = '- '
+        indent = '—'
 
         self.list.append(getConfigListEntry(_("Automatic bouquet update (schedule):"), config.plugins.e2m3u2b.autobouquetupdate, _("Enable to update bouquets on a schedule")))
         if config.plugins.e2m3u2b.autobouquetupdate.getValue():
-            self.list.append(getConfigListEntry(indent + _("Schedule type:"), config.plugins.e2m3u2b.scheduletype, _("Choose either a fixed time or an hourly update interval")))
+            self.list.append(getConfigListEntry(indent + ' ' + _("Schedule type:"), config.plugins.e2m3u2b.scheduletype, _("Choose either a fixed time or an hourly update interval")))
             if config.plugins.e2m3u2b.scheduletype.value == 'interval':
-                self.list.append(getConfigListEntry(2 * indent + _("Update interval (hours):"), config.plugins.e2m3u2b.updateinterval, _("Set the number of hours between automatic bouquet updates")))
+                self.list.append(getConfigListEntry(2 * indent + ' ' + _("Update interval (hours):"), config.plugins.e2m3u2b.updateinterval, _("Set the number of hours between automatic bouquet updates")))
             if config.plugins.e2m3u2b.scheduletype.value == 'fixed time':
                 self.list.append(getConfigListEntry(2 * indent + _("Time to start update:"), config.plugins.e2m3u2b.schedulefixedtime, _("Set the day of time to perform the bouquet update")))
         self.list.append(getConfigListEntry(_("Automatic bouquet update (when box starts):"), config.plugins.e2m3u2b.autobouquetupdateatboot, _("Update bouquets at startup")))
         self.list.append(getConfigListEntry(_("Picon save path:"), config.plugins.e2m3u2b.iconpath, _("Select where to save picons (if download is enabled)")))
-        self.list.append(getConfigListEntry(_("Attempt Epg Import:"), config.plugins.e2m3u2b.do_epgimport, _("Automatically run Epg Import after bouquet update")))
+        if EPGImport:
+            self.list.append(getConfigListEntry(_("Attempt Epg Import:"), config.plugins.e2m3u2b.do_epgimport, _("Automatically run Epg Import after bouquet update")))
         self.list.append(getConfigListEntry(_("Show in extensions:"), config.plugins.e2m3u2b.extensions, _("Show in extensions menu")))
         self.list.append(getConfigListEntry(_("Show in main menu:"), config.plugins.e2m3u2b.mainmenu, _("Show in main menu")))
         self.list.append(getConfigListEntry(_("Debug mode:"), config.plugins.e2m3u2b.debug, _("Enable debug mode. Do not enable unless requested")))

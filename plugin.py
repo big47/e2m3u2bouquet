@@ -46,8 +46,9 @@ try:
     nowTime = time.time()
     if nowTime > 1514808000:
 	setRTCtime(nowTime)
-    print>>log, '[e2m3u2b] [{}] Set system time from NTP'.format(time.strftime('%c', time.localtime(int(time.time()))))
+        print>>log, '[e2m3u2b] [{}] Set system time from NTP'.format(time.strftime('%c', time.localtime(int(time.time()))))
 except: pass
+
 try:
     e2m3u2bouquet.web_server()
     print>>log, '[e2m3u2b] [{}] Web service on port {} started'.format(time.strftime('%c', time.localtime(int(time.time()))), e2m3u2bouquet.PORT)
@@ -96,7 +97,7 @@ config.plugins.e2m3u2b.iconpath = ConfigSelection(default=e2m3u2bouquet.PICONSPA
 config.plugins.e2m3u2b.last_update = ConfigText()
 config.plugins.e2m3u2b.extensions = ConfigYesNo(default=False)
 config.plugins.e2m3u2b.mainmenu = ConfigYesNo(default=False)
-config.plugins.e2m3u2b.do_epgimport = ConfigYesNo(default=True)
+config.plugins.e2m3u2b.do_epgimport = ConfigYesNo(default=False)
 config.plugins.e2m3u2b.debug = ConfigOnOff(default=False)
 config.plugins.e2m3u2b.cfglevel = ConfigText(default='')
 
@@ -223,7 +224,7 @@ def start_process_providers(providers_to_process, e2m3u2b_config):
         nowTime = time.time()
         if nowTime > 1514808000:
             setRTCtime(nowTime)
-        print>>log, '[e2m3u2b] [{}] Set system time from NTP'.format(time.strftime('%c', time.localtime(int(time.time()))))
+            print>>log, '[e2m3u2b] [{}] Set system time from NTP'.format(time.strftime('%c', time.localtime(int(time.time()))))
     except: pass
 
     for provider_config in providers_to_process:
@@ -282,7 +283,6 @@ def set_default_do_epgimport():
 
 def open_menu(session):
     session.open(E2m3u2b_Menu)
-
 
 def check_cfg_folder():
     """Make config folder if it doesn't exist

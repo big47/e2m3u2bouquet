@@ -182,7 +182,7 @@ class E2m3u2b_Providers_Config(ConfigListScreen, Screen):
         self.provider_enabled.value = self.provider.enabled
         self.provider_name = ConfigText(default='', fixed_size=False, visible_width=20)
         self.provider_name.value = self.provider.name if self.provider.name != 'New' else ''
-        self.provider_settings_level = ConfigSelection(default=_('simple'), choices=[_('simple'), _('expert')])
+        self.provider_settings_level = ConfigSelection(default='0', choices=[('0', _('simple')), ('1', _('expert'))])
         self.provider_settings_level.value = self.provider.settings_level
         self.provider_m3u_url = ConfigText(default='', fixed_size=False, visible_width=20)
         self.provider_m3u_url.value = self.provider.m3u_url
@@ -212,8 +212,6 @@ class E2m3u2b_Providers_Config(ConfigListScreen, Screen):
         self.provider_progressive.value = self.provider.progressive
         self.provider_live_ts = ConfigSelection(default='0', choices=[('0', _('no')), ('1', _('yes'))])     # EXT3_PLAYBACK_LIVETS
         self.provider_live_ts.value = self.provider.live_ts
-        self.provider_ffmpeg_option = ConfigText(default='', fixed_size=False, visible_width=20)  # EXT3_FFMPEG_SETTING_STRING
-        self.provider_ffmpeg_option.value = self.provider.ffmpeg_option
         # 5001 GstPlayer options
         self.provider_ring_buffer_maxsize = ConfigInteger(32768, (1024, 1024 * 64))  # GST_RING_BUFFER_MAXSIZE
         self.provider_ring_buffer_maxsize.value = self.provider.ring_buffer_maxsize
@@ -234,7 +232,7 @@ class E2m3u2b_Providers_Config(ConfigListScreen, Screen):
     def create_setup(self):
         self.editListEntry = None
         self.list = []
-        indent = '- '
+        indent = '— '
 
         self.list.append(getConfigListEntry("%s:" % _("Name"), self.provider_name, _("Provider name")))
         self.list.append(getConfigListEntry("%s:" % _("Delete"), self.provider_delete, _("Delete provider %s") % self.provider.name))
@@ -251,7 +249,7 @@ class E2m3u2b_Providers_Config(ConfigListScreen, Screen):
                 if self.provider_multi_vod.value:
                     self.list.append(getConfigListEntry(indent + _("Create all channels bouquet:"), self.provider_all_bouquet, _("Create a separate bouquet containing all channels")))
                 self.list.append(getConfigListEntry(_("IPTV bouquet position:"), self.provider_bouquet_pos, _("Select where to place IPTV bouquets")))
-                if self.provider_settings_level.value == _('expert'):
+                if self.provider_settings_level.value == '1':
                     self.list.append(getConfigListEntry(_("Live Player Type:"), self.provider_streamtype_tv, _("Stream player type for TV services")))
 
                     if self.provider_streamtype_tv.value == '4097':
@@ -261,7 +259,6 @@ class E2m3u2b_Providers_Config(ConfigListScreen, Screen):
                         self.list.append(getConfigListEntry(indent + _("FLV2 to MPEG4 converter:"), self.provider_flv2mpeg4, _("Convert flv2 stream to mpeg4")))
                         self.list.append(getConfigListEntry(indent + _("Use http progressive download:"), self.provider_progressive, _("It should be enabled if the provider gives a stream in http progressive download")))
                         self.list.append(getConfigListEntry(indent + _("Live TS:"), self.provider_live_ts, _("Enable if broadcast is Live TS")))
-                        self.list.append(getConfigListEntry(indent + _("Additional ffmpeg options:"), self.provider_ffmpeg_option, _("Additional ffmpeg options for stream decoding")))
 
                     if self.provider_streamtype_tv.value == '5001':
                         self.list.append(getConfigListEntry(indent + _("Ring Buffer Size:"), self.provider_ring_buffer_maxsize, _("Ring buffer size (Stack) in Kbytes")))
@@ -323,7 +320,6 @@ class E2m3u2b_Providers_Config(ConfigListScreen, Screen):
         self.provider.flv2mpeg4 = self.provider_flv2mpeg4.value
         self.provider.progressive = self.provider_progressive.value
         self.provider.live_ts = self.provider_live_ts.value
-        self.provider.ffmpeg_option = self.provider_ffmpeg_option.value.strip()
         # 5001 GstPlayer options
         self.provider.ring_buffer_maxsize = self.provider_ring_buffer_maxsize.value
         self.provider.buffer_size = self.provider_buffer_size.value
