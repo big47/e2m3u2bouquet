@@ -54,9 +54,9 @@ except ImportError:
     pass
 
 __all__ = []
-__version__ = '0.9.9.9'
+__version__ = '0.9.9.8'
 __date__ = '2017-06-04'
-__updated__ = '2020-03-01'
+__updated__ = '2020-02-29'
 
 DEBUG = 0
 TESTRUN = 0
@@ -671,7 +671,7 @@ class Provider(object):
                         f.write('#SERVICE 1:64:0:0:0:0:0:0:0:0:\n')
                         f.write('#DESCRIPTION {}\n'.format(get_category_title(cat, self._category_options)))
                         for x in self._dictchannels[cat]:
-                            if x.get('enabled') or  x['stream-name'].startswith('placeholder_'):
+                            if x.get('enabled') or x['stream-name'].startswith('placeholder_'):
                                 self._save_bouquet_entry(f, x)
                             channel_num += 1
 
@@ -879,6 +879,7 @@ class Provider(object):
                                 service_dict.update({'group-title': line.split(':')[1].strip()})
                             except:
                                 pass
+
                     elif line.startswith('#EXTVLCOPT:') and name:
                         params = {k:v for k,v in [x.split('=') for x in line.split(':') if '=' in x]}
                         if 'http-user-agent' in params:

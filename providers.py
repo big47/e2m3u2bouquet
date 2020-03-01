@@ -186,8 +186,8 @@ class E2m3u2b_Providers_Config(ConfigListScreen, Screen):
         self.provider_settings_level.value = self.provider.settings_level
         self.provider_m3u_url = ConfigText(default='', fixed_size=False, visible_width=20)
         self.provider_m3u_url.value = self.provider.m3u_url
-        self.provider_used_epg = ConfigSelection(default=_('custom'), choices=[_('default'), _('custom')])
-        if self.provider_used_epg.value == _('default'):
+        self.provider_used_epg = ConfigSelection(default=1, choices=[(0, _('default')), (1, _('custom'))])
+        if not self.provider_used_epg.value:
             self.provider_epg_url = e2m3u2bouquet.DEFAULTEPG
         self.provider_epg_url = ConfigText(default='', fixed_size=False, visible_width=20)
         self.provider_epg_url.value = self.provider.epg_url
@@ -195,9 +195,8 @@ class E2m3u2b_Providers_Config(ConfigListScreen, Screen):
         self.provider_multi_vod.value = self.provider.multi_vod
         self.provider_picons = ConfigYesNo(default=False)
         self.provider_picons.value = self.provider.picons
-        self.provider_bouquet_pos = ConfigSelection(default=_('bottom'), choices=[_('bottom'), _('top')])
-        if self.provider.bouquet_top:
-            self.provider_bouquet_pos.value = _('top')
+        self.provider_bouquet_top = ConfigSelection(default=0, choices=[(0, _('bottom')), (1, _('top'))])
+        self.provider_bouquet_top.value = self.provider.bouquet_top
         self.provider_all_bouquet = ConfigYesNo(default=True)
         self.provider_all_bouquet.value = self.provider.all_bouquet
         self.provider_streamtype_tv = ConfigSelection(default='4097', choices=available_players)
@@ -242,13 +241,13 @@ class E2m3u2b_Providers_Config(ConfigListScreen, Screen):
                 self.list.append(getConfigListEntry("%s:" % _("Setup mode"), self.provider_settings_level, _("Choose level of settings. Expert shows all options")))
                 self.list.append(getConfigListEntry("%s:" % _("M3U url"), self.provider_m3u_url, _("Provider playlist M3U url-link or file")))
                 self.list.append(getConfigListEntry(_("Used EPG:"), self.provider_used_epg, _("If selected default, the plugin will use a predefined EPG by r.rusya")))
-                if self.provider_used_epg.value == _('custom'):
+                if self.provider_used_epg.value:
                     self.list.append(getConfigListEntry(indent + "%s:" % _("EPG url"), self.provider_epg_url, _("url link to EPG issued by provider. Leave blank if the m3u playlist has url-tvg or url-epg tags")))
                 self.list.append(getConfigListEntry("%s:" % _("Picons"), self.provider_picons, _("Automatically download Picons")))
                 self.list.append(getConfigListEntry("%s:" % _("Multi Bouquets"), self.provider_multi_vod, _("Enable to create multiple bouquets rather than single All bouquet")))
                 if self.provider_multi_vod.value:
                     self.list.append(getConfigListEntry(indent + _("Create all channels bouquet:"), self.provider_all_bouquet, _("Create a separate bouquet containing all channels")))
-                self.list.append(getConfigListEntry(_("IPTV bouquet position:"), self.provider_bouquet_pos, _("Select where to place IPTV bouquets")))
+                self.list.append(getConfigListEntry(_("IPTV bouquet position:"), self.provider_bouquet_top, _("Select where to place IPTV bouquets")))
                 if self.provider_settings_level.value == '1':
                     self.list.append(getConfigListEntry(_("Live Player Type:"), self.provider_streamtype_tv, _("Stream player type for TV services")))
 
@@ -302,16 +301,13 @@ class E2m3u2b_Providers_Config(ConfigListScreen, Screen):
         self.provider.name = self.provider_name.value
         self.provider.settings_level = self.provider_settings_level.value
         self.provider.m3u_url = self.provider_m3u_url.value
-        if self.provider_used_epg.value == _('default'):
+        if self.provider_used_epg.value:
            self.provider.epg_url = e2m3u2bouquet.DEFAULTEPG
         else:
            self.provider.epg_url = self.provider_epg_url.value
         self.provider.multi_vod = self.provider_multi_vod.value
         self.provider.picons = self.provider_picons.value
-        if self.provider_bouquet_pos.value == _('top'):
-            self.provider.bouquet_top = True
-        else:
-            self.provider.bouquet_top = False
+        self.provider.bouquet_top = self.provider_bouquet_top.value
         self.provider.all_bouquet = self.provider_all_bouquet.value
         self.provider.streamtype_tv = self.provider_streamtype_tv.value.strip()
         # 4097 Gstreamer options
