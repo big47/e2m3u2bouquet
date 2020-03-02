@@ -4,8 +4,7 @@ from . import _
 
 import os, log
 #import providersmanager as PM
-import e2m3u2bouquet
-from enigma import eTimer, eEnv
+from enigma import eTimer, eEnv, getDesktop
 from Components.config import ConfigOnOff, ConfigYesNo, getConfigListEntry, \
                               ConfigText, ConfigInteger, ConfigSelection, ConfigPassword
 from Components.Label import Label
@@ -22,13 +21,17 @@ try:
     from Tools.Directoires import SCOPE_ACTIVE_SKIN
 except:
     pass
-from skin_templates import skin_hidesections, skin_setup, skin_about
+import e2m3u2bouquet
+
+ScreenWidth = getDesktop(0).size().width()
+ScreenWidth = 'HD' if ScreenWidth and ScreenWidth >= 1920 else 'SD'
 
 class E2m3u2b_Providers(Screen):
 
-    skin = skin_hidesections()
-
     def __init__(self, session):
+
+        with open(resolveFilename(SCOPE_PLUGINS, 'Extensions/E2m3u2bouquet/skins/{}/'.format(ScreenWidth)) +'providers.xml', 'r') as f:
+            self.skin = f.read()
 
         self.session = session
         Screen.__init__(self, session)
@@ -116,9 +119,11 @@ class E2m3u2b_Providers(Screen):
 
 class E2m3u2b_Providers_Config(ConfigListScreen, Screen):
 
-    skin = skin_setup()
 
     def __init__(self, session, providers_config, provider):
+
+        with open(resolveFilename(SCOPE_PLUGINS, 'Extensions/E2m3u2bouquet/skins/{}/'.format(ScreenWidth)) +'providerconfig.xml', 'r') as f:
+            self.skin = f.read()
 
         self.session = session
         Screen.__init__(self, session)
@@ -186,16 +191,13 @@ class E2m3u2b_Providers_Config(ConfigListScreen, Screen):
         self.provider_settings_level.value = self.provider.settings_level
         self.provider_m3u_url = ConfigText(default='', fixed_size=False, visible_width=20)
         self.provider_m3u_url.value = self.provider.m3u_url
-        self.provider_used_epg = ConfigSelection(default=1, choices=[(0, _('default')), (1, _('custom'))])
-        if not self.provider_used_epg.value:
-            self.provider_epg_url = e2m3u2bouquet.DEFAULTEPG
         self.provider_epg_url = ConfigText(default='', fixed_size=False, visible_width=20)
         self.provider_epg_url.value = self.provider.epg_url
         self.provider_multi_vod = ConfigYesNo(default=True)
         self.provider_multi_vod.value = self.provider.multi_vod
         self.provider_picons = ConfigYesNo(default=False)
         self.provider_picons.value = self.provider.picons
-        self.provider_bouquet_top = ConfigSelection(default=0, choices=[(0, _('bottom')), (1, _('top'))])
+        self.provider_bouquet_top = ConfigSelection(default=False, choices=[(False, _('bottom')), (True, _('top'))])
         self.provider_bouquet_top.value = self.provider.bouquet_top
         self.provider_all_bouquet = ConfigYesNo(default=True)
         self.provider_all_bouquet.value = self.provider.all_bouquet
@@ -218,7 +220,7 @@ class E2m3u2b_Providers_Config(ConfigListScreen, Screen):
         self.provider_buffer_size.value = self.provider.buffer_size
         self.provider_buffer_duration = ConfigInteger(0, (0, 100))                   # GST_BUFFER_DURATION
         self.provider_buffer_duration.value = self.provider.buffer_duration
-
+        # VOD Player Options
         self.provider_streamtype_vod = ConfigSelection(default='4097', choices=available_players)
         self.provider_streamtype_vod.value = self.provider.streamtype_vod
         self.provider_sref_override = ConfigOnOff(default=False)
@@ -240,9 +242,7 @@ class E2m3u2b_Providers_Config(ConfigListScreen, Screen):
             if self.provider_enabled.value:
                 self.list.append(getConfigListEntry("%s:" % _("Setup mode"), self.provider_settings_level, _("Choose level of settings. Expert shows all options")))
                 self.list.append(getConfigListEntry("%s:" % _("M3U url"), self.provider_m3u_url, _("Provider playlist M3U url-link or file")))
-                self.list.append(getConfigListEntry(_("Used EPG:"), self.provider_used_epg, _("If selected default, the plugin will use a predefined EPG by r.rusya")))
-                if self.provider_used_epg.value:
-                    self.list.append(getConfigListEntry(indent + "%s:" % _("EPG url"), self.provider_epg_url, _("url link to EPG issued by provider. Leave blank if the m3u playlist has url-tvg or url-epg tags")))
+                self.list.append(getConfigListEntry("%s:" % _("EPG url"), self.provider_epg_url, _("url link to EPG issued by provider. Leave blank if the m3u playlist has url-tvg or url-epg tags")))
                 self.list.append(getConfigListEntry("%s:" % _("Picons"), self.provider_picons, _("Automatically download Picons")))
                 self.list.append(getConfigListEntry("%s:" % _("Multi Bouquets"), self.provider_multi_vod, _("Enable to create multiple bouquets rather than single All bouquet")))
                 if self.provider_multi_vod.value:
@@ -301,10 +301,7 @@ class E2m3u2b_Providers_Config(ConfigListScreen, Screen):
         self.provider.name = self.provider_name.value
         self.provider.settings_level = self.provider_settings_level.value
         self.provider.m3u_url = self.provider_m3u_url.value
-        if self.provider_used_epg.value:
-           self.provider.epg_url = e2m3u2bouquet.DEFAULTEPG
-        else:
-           self.provider.epg_url = self.provider_epg_url.value
+        self.provider.epg_url = self.provider_epg_url.value
         self.provider.multi_vod = self.provider_multi_vod.value
         self.provider.picons = self.provider_picons.value
         self.provider.bouquet_top = self.provider_bouquet_top.value

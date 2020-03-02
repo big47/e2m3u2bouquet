@@ -227,6 +227,8 @@ def start_process_providers(providers_to_process, e2m3u2b_config):
             print>>log, '[e2m3u2b] [{}] Set system time from NTP'.format(time.strftime('%c', time.localtime(int(time.time()))))
     except: pass
 
+    do_reset()
+
     for provider_config in providers_to_process:
         provider = e2m3u2bouquet.Provider(provider_config)
 

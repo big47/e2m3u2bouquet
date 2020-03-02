@@ -1,4 +1,5 @@
-# -*- coding: utf-8 -*- for localized messages
+# -*- coding: utf-8 -*-
+# for localized messages
 from . import _
 
 import os
@@ -25,17 +26,20 @@ from Tools.LoadPixmap import LoadPixmap
 from Screens.MessageBox import MessageBox
 from Screens.Screen import Screen
 
-from skin_templates import skin_mainmenu, skin_log, skin_setup, skin_about
 try:
     import Plugins.Extensions.EPGImport.EPGImport as EPGImport
 except ImportError:
     EPGImport = None
 
+ScreenWidth = enigma.getDesktop(0).size().width()
+ScreenWidth = 'HD' if ScreenWidth and ScreenWidth >= 1920 else 'SD'
+
 class E2m3u2b_Menu(Screen):
 
-    skin = skin_mainmenu()
-
     def __init__(self, session):
+
+        with open(resolveFilename(SCOPE_PLUGINS, 'Extensions/E2m3u2bouquet/skins/{}/'.format(ScreenWidth)) + 'mainmenu.xml', 'r') as f:
+            self.skin = f.read()
 
         Screen.__init__(self, session)
         Screen.setTitle(self, "IPTV Bouquet Maker - Dorik edition")
@@ -117,7 +121,7 @@ class E2m3u2b_Menu(Screen):
 
 class E2m3u2b_Config(ConfigListScreen, Screen):
 
-    skin = skin_setup()
+#    skin = skin_setup()
 
     try: # Work-around to get OpenSPA working
 	from boxbranding import getImageDistro
@@ -133,6 +137,9 @@ class E2m3u2b_Config(ConfigListScreen, Screen):
 	pass
 
     def __init__(self, session):
+
+        with open(resolveFilename(SCOPE_PLUGINS, 'Extensions/E2m3u2bouquet/skins/{}/'.format(ScreenWidth)) + 'mainconfig.xml', 'r') as f:
+            self.skin = f.read()
 
         self.session = session
         Screen.__init__(self, session)
@@ -212,9 +219,10 @@ class E2m3u2b_Config(ConfigListScreen, Screen):
 
 class E2m3u2b_Status(Screen):
 
-    skin = skin_about()
-
     def __init__(self, session):
+
+        with open(resolveFilename(SCOPE_PLUGINS, 'Extensions/E2m3u2bouquet/skins/{}/'.format(ScreenWidth)) + 'status.xml', 'r') as f:
+            self.skin = f.read()
 
         self.session = session
         Screen.__init__(self, session)
@@ -240,9 +248,11 @@ class E2m3u2b_Status(Screen):
 
 class E2m3u2b_Log(Screen):
 
-    skin = skin_log()
-
     def __init__(self, session):
+
+        with open(resolveFilename(SCOPE_PLUGINS, 'Extensions/E2m3u2bouquet/skins/{}/'.format(ScreenWidth)) + 'log.xml', 'r') as f:
+            self.skin = f.read()
+
 
         self.session = session
         Screen.__init__(self, session)
@@ -287,9 +297,10 @@ class E2m3u2b_Log(Screen):
 
 class E2m3u2b_Update(Screen):
 
-    skin = skin_about()
-
     def __init__(self, session, epgimport):
+
+        with open(resolveFilename(SCOPE_PLUGINS, 'Extensions/E2m3u2bouquet/skins/{}/'.format(ScreenWidth)) + 'update.xml', 'r') as f:
+            self.skin = f.read()
 
         self.session = session
         Screen.__init__(self, session)
@@ -367,6 +378,7 @@ class E2m3u2b_Update(Screen):
                                                                               self.epgimport.eventCount))
 
 class E2m3u2b_Check(Screen):
+
     def __init__(self, session):
         Screen.__init__(self, session)
         self.session = session

@@ -10,13 +10,17 @@ from Components.ActionMap import ActionMap
 from Components.Pixmap import Pixmap
 from Components.Button import Button
 from Tools.Directories import resolveFilename, SCOPE_PLUGINS
-from skin_templates import skin_about
+from enigma import getDesktop
+
+ScreenWidth = getDesktop(0).size().width()
+ScreenWidth = 'HD' if ScreenWidth and ScreenWidth >= 1920 else 'SD'
 
 class E2m3u2b_About(Screen):
 
-    skin = skin_about()
-
     def __init__(self, session):
+
+        with open(resolveFilename(SCOPE_PLUGINS, 'Extensions/E2m3u2bouquet/skins/{}/'.format(ScreenWidth)) +'about.xml', 'r') as f:
+            self.skin = f.read()
 
         self.session = session
         Screen.__init__(self, session)

@@ -54,9 +54,9 @@ except ImportError:
     pass
 
 __all__ = []
-__version__ = '0.9.9.8'
+__version__ = '0.9.9.9'
 __date__ = '2017-06-04'
-__updated__ = '2020-02-29'
+__updated__ = '2020-03-01'
 
 DEBUG = 0
 TESTRUN = 0
@@ -87,7 +87,7 @@ ip_last_octet = u"(?:\.(?:[1-9]\d?|1\d\d|2[0-4]\d|25[0-4]))"
 URL_PATTERN = re.compile(
                          u"^"
                          # protocol identifier
-                         u"(?:(?:https?|ftp|rtsp|rtp|mmp)://)"
+                         u"(?:(?:https?|rtsp|rtp|mmp)://)"
                          # user:pass authentication
                          u"(?:\S+(?::\S*)?@)?"
                          u"(?:"
@@ -220,10 +220,8 @@ def uninstaller():
         print('Removing IPTV bouquets from bouquets.tv...')
         os.rename(os.path.join(ENIGMAPATH, 'bouquets.tv'), os.path.join(ENIGMAPATH, 'bouquets.tv.bak'))
         with open(os.path.join(ENIGMAPATH, 'bouquets.tv'), 'w+') as tvfile, \
-               open(os.path.join(ENIGMAPATH, 'bouquets.tv.bak')) as bakfile:
-            for line in bakfile:
-                if '.e2m3u2b_iptv_' not in line:
-                    tvfile.write(line)
+               open(os.path.join(ENIGMAPATH, 'bouquets.tv.bak'), 'r') as bakfile:
+            tvfile.writelines([l for l in bakfile if '.e2m3u2b_iptv_' not in l])
 
     except Exception:
         print('Unable to uninstall')
@@ -535,9 +533,9 @@ class Provider(object):
                 # apply overrides
                 channel_nodes = tree.iter('channel')
                 for override_channel in channel_nodes:
-                    name = override_channel.attrib.get('name')
-                    category = override_channel.attrib.get('category')
-                    category_override = override_channel.attrib.get('categoryOverride')
+                    name = override_channel.attrib.get('name').decode('utf-8')
+                    category = override_channel.attrib.get('category').decode('utf-8')
+                    category_override = override_channel.attrib.get('categoryOverride').decode('utf-8')
                     channel_index = None
 
                     if category_override:
@@ -616,14 +614,13 @@ class Provider(object):
     def _save_bouquet_index_entries(self, iptv_bouquets):
         """Add to the main bouquets.tv file
         """
-        # get current bouquets indexes
-        current_bouquet_indexes = self._get_current_bouquet_indexes()
-
         if iptv_bouquets:
+            # get current bouquets indexes
+            current_bouquet_indexes = self._get_current_bouquet_indexes()
             with open(os.path.join(ENIGMAPATH, 'bouquets.tv'), 'w') as f:
                 f.write('#NAME Bouquets (TV)\n')
                 if self.config.bouquet_top:
-                    f.writelines(iptv_bouquets_list)
+                    f.writelines(iptv_bouquets)
                     f.writelines(current_bouquet_indexes)
                 else:
                     f.writelines(current_bouquet_indexes)
@@ -632,15 +629,8 @@ class Provider(object):
     def _get_current_bouquet_indexes(self):
         """Get all the bouquet indexes except this provider
         """
-        current_bouquets_indexes = []
-
         with open(os.path.join(ENIGMAPATH, 'bouquets.tv'), 'r') as f:
-            for line in f:
-                if line.startswith('#NAME'):
-                    continue
-                elif not '.e2m3u2b_iptv_{}'.format(slugify(self.config.name)) in line:
-                    current_bouquets_indexes.append(line)
-        return current_bouquets_indexes
+            return [l for l in f if not any([l.startswith('#NAME'), '.e2m3u2b_iptv_{}'.format(slugify(self.config.name)) in l])]
 
     def _create_all_channels_bouquet(self):
         """Create the Enigma2 all channels bouquet
@@ -1434,9 +1424,9 @@ class Config(object):
                         if child.tag == 'settingslevel':
                             provider.settings_level = '0' if value not in ('0', '1') else value
                         if child.tag == 'm3uurl':
-                            provider.m3u_url = '' if value is None or not url_validate(value) else value
+                            provider.m3u_url = '' if value is None else value
                         if child.tag == 'epgurl':
-                            provider.epg_url = '' if value is None or not url_validate(value) else value
+                            provider.epg_url = '' if value is None else value
                         if child.tag == 'streamtypetv':
                             provider.streamtype_tv = '4097' if value not in ('1', '4097', '5001', '5002') else value
                         # 4097 Gstreamer options (0-no buffering, 1-buffering enabled, 3- http progressive download & buffering enabl)

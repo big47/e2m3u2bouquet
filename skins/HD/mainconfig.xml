@@ -1,0 +1,7 @@
+<screen position="center,center" size="1095,500">
+    <ePixmap pixmap="/usr/lib/enigma2/python/Plugins/Extensions/E2m3u2bouquet/images/key_red.png" position="0,0" size="140,40" transparent="1" alphatest="on" />
+    <ePixmap pixmap="/usr/lib/enigma2/python/Plugins/Extensions/E2m3u2bouquet/images/key_green.png" position="140,0" size="140,40" transparent="1" alphatest="on" />
+    <widget name="key_red" position="0,0" size="140,40" valign="center" halign="center" zPosition="4" foregroundColor="white" font="Regular;20" transparent="1" shadowColor="background" shadowOffset="-2,-2" />
+    <widget name="key_green" position="140,0" size="140,40" valign="center" halign="center" zPosition="4" foregroundColor="white" font="Regular;20" transparent="1" shadowColor="background" shadowOffset="-2,-2" />
+    <widget name="config" position="10,60" size="1085,350" scrollbarMode="showOnDemand" />
+</screen>

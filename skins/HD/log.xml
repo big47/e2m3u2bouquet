@@ -1,0 +1,9 @@
+<screen position="center,center" size="1095,500">
+    <ePixmap name="red" position="0,0" zPosition="2" size="140,40" pixmap="/usr/lib/enigma2/python/Plugins/Extensions/E2m3u2bouquet/images/key_red.png" transparent="1" alphatest="on" />
+    <ePixmap name="green" position="140,0" zPosition="2" size="140,40" pixmap="/usr/lib/enigma2/python/Plugins/Extensions/E2m3u2bouquet/images/key_green.png" transparent="1" alphatest="on" />
+    <ePixmap name="blue" position="280,0" zPosition="2" size="140,40" pixmap="/usr/lib/enigma2/python/Plugins/Extensions/E2m3u2bouquet/images/key_blue.png" transparent="1" alphatest="on" />
+    <widget name="key_red" position="0,0" size="140,40" valign="center" halign="center" zPosition="4" foregroundColor="white" font="Regular;20" transparent="1" shadowColor="background" shadowOffset="-2,-2" />
+    <widget name="key_green" position="140,0" size="140,40" valign="center" halign="center" zPosition="4" foregroundColor="white" font="Regular;20" transparent="1" shadowColor="background" shadowOffset="-2,-2" />
+    <widget name="key_blue" position="280,0" size="140,40" valign="center" halign="center" zPosition="4" foregroundColor="white" font="Regular;20" transparent="1" shadowColor="background" shadowOffset="-2,-2" />
+    <widget name="list" position="10,40" size="1035,430" font="Regular;18"/>
+</screen>
