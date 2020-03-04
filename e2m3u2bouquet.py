@@ -54,9 +54,9 @@ except ImportError:
     pass
 
 __all__ = []
-__version__ = '0.9.9.9'
+__version__ = '1.0.0'
 __date__ = '2017-06-04'
-__updated__ = '2020-03-01'
+__updated__ = '2020-03-03'
 
 DEBUG = 0
 TESTRUN = 0
@@ -208,20 +208,21 @@ def uninstaller():
     print(Status.message)
     try:
         # Bouquets
-        print('Removing old IPTV bouquets...')
-        map(lambda fname: os.remove(os.path.join(ENIGMAPATH, fname)) if 'userbouquet.e2m3u2b_iptv_' in fname else os.remove(os.path.join(ENIGMAPATH, fname)) if 'bouquets.tv.bak' in fname else None, os.listdir(ENIGMAPATH))
-        # Custom Channels and sources
-        print('Removing IPTV custom channels...')
+        print('Removing IPTV userbouquets...')
+        map(lambda fname: os.remove(os.path.join(ENIGMAPATH, fname)) if 'userbouquet.e2m3u2b_iptv_' in fname else None, os.listdir(ENIGMAPATH))
+        # EPG parsers config files
+        print('Removing EPG parsers config files...')
         if os.path.isdir(EPGIMPORTPATH):
             map(lambda fname: os.remove(os.path.join(EPGIMPORTPATH, fname)) if 'e2m3u2b_iptv_' in fname else None, os.listdir(EPGIMPORTPATH))
         if os.path.isdir(CROSSEPGPATH):
             map(lambda fname: os.remove(os.path.join(CROSSEPGPATH, fname)) if 'e2m3u2b_iptv_' in fname else None, os.listdir(CROSSEPGPATH))
         # bouquets.tv
         print('Removing IPTV bouquets from bouquets.tv...')
-        os.rename(os.path.join(ENIGMAPATH, 'bouquets.tv'), os.path.join(ENIGMAPATH, 'bouquets.tv.bak'))
-        with open(os.path.join(ENIGMAPATH, 'bouquets.tv'), 'w+') as tvfile, \
-               open(os.path.join(ENIGMAPATH, 'bouquets.tv.bak'), 'r') as bakfile:
-            tvfile.writelines([l for l in bakfile if '.e2m3u2b_iptv_' not in l])
+        with open(os.path.join(ENIGMAPATH, 'bouquets.tv'), 'r+') as f:
+            indexes = [l for l in f if not '.e2m3u2b_iptv_' in l]
+            f.seek(0)
+            f.truncate()
+            f.writelines(indexes)
 
     except Exception:
         print('Unable to uninstall')
@@ -414,7 +415,7 @@ class Provider(object):
         else:
             service_dict['category_type'] = 'vod'
             service_dict['group-title'] = 'VOD - {}'.format(service_dict['group-title'])
-            service_dict['stream-type'] = '4097' if not self.config.streamtype_vod else str(self.config.streamtype_vod)
+            service_dict['stream-type'] = str(self.config.streamtype_vod) if self.config.streamtype_vod else '4097'
 
     def _parse_map_bouquet_xml(self):
         """Check for bouquets within mapping override file and applies if found
@@ -615,22 +616,17 @@ class Provider(object):
         """Add to the main bouquets.tv file
         """
         if iptv_bouquets:
-            # get current bouquets indexes
-            current_bouquet_indexes = self._get_current_bouquet_indexes()
-            with open(os.path.join(ENIGMAPATH, 'bouquets.tv'), 'w') as f:
+            with open(os.path.join(ENIGMAPATH, 'bouquets.tv'), 'r+') as f:
+                # Get all the bouquet indexes except this provider
+                current_bouquet_indexes = [l for l in f if not any([l.startswith('#NAME'), '.e2m3u2b_iptv_{}'.format(slugify(self.config.name)) in l])]
+                f.seek(0)
+                f.truncate()
+                #f.truncate(0)
                 f.write('#NAME Bouquets (TV)\n')
                 if self.config.bouquet_top:
-                    f.writelines(iptv_bouquets)
-                    f.writelines(current_bouquet_indexes)
+                    f.writelines(iptv_bouquets + current_bouquet_indexes)
                 else:
-                    f.writelines(current_bouquet_indexes)
-                    f.writelines(iptv_bouquets)
-
-    def _get_current_bouquet_indexes(self):
-        """Get all the bouquet indexes except this provider
-        """
-        with open(os.path.join(ENIGMAPATH, 'bouquets.tv'), 'r') as f:
-            return [l for l in f if not any([l.startswith('#NAME'), '.e2m3u2b_iptv_{}'.format(slugify(self.config.name)) in l])]
+                    f.writelines(current_bouquet_indexes + iptv_bouquets)
 
     def _create_all_channels_bouquet(self):
         """Create the Enigma2 all channels bouquet
@@ -1197,10 +1193,7 @@ class Provider(object):
             self._save_bouquet_index_entries(self._create_all_channels_bouquet())
             return
 
-        if self.config.multi_vod and self.config.all_bouquet:
-            iptv_bouquet_list = self._create_all_channels_bouquet()
-        else:
-            iptv_bouquet_list = []
+        iptv_bouquet_list = self._create_all_channels_bouquet() if self.config.multi_vod and self.config.all_bouquet else []
 
         vod_categories = [cat for cat in self._category_order if self._category_options[cat].get('type', 'live') == 'vod']
         vod_category_output = False
@@ -1326,7 +1319,7 @@ class Provider(object):
                                     if tvg_id == '':
                                         tvg_check.append(True)
                                         tvg_id = self.get_tvgid(get_service_title(x))  # force to default value if tvg-id is empty
-                                    f.write('{}<channel id="{}">{}:</channel> <!-- {} -->\n'
+                                    f.write('{}<channel id="{}">{}:http%3a//example.m3u8</channel> <!-- {} -->\n'
                                             .format(indent, xml_escape(tvg_id),
                                                        x['serviceRef'].replace(x['stream-type'], '1', 1), # force the epg channels to stream type '1'
                                                            xml_escape(get_service_title(x))))
@@ -1347,8 +1340,8 @@ class Config(object):
     def make_default_config(self, configfile):
         print('Default configuration file created in {}\n'.format(os.path.join(CFGPATH, 'config.xml')))
 
-        f = open(configfile, 'wb')
-        f.write("""
+        with open(configfile, 'wb') as f:
+            f.write("""
 <?xml version="1.0" encoding="utf-8"?>\r
 <!-- Automatically generated by the e2m3u2b -->\r
 <!--\r
